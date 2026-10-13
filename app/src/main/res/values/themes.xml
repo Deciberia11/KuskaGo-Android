@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.KuskaGo" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/kuskago_bg</item>
+        <item name="android:colorAccent">@color/kuskago_green</item>
+    </style>
+
+    <color name="kuskago_bg">#FAF7F1</color>
+    <color name="kuskago_green">#176B57</color>
+    <color name="ic_launcher_background">#DCEFE6</color>
+</resources>

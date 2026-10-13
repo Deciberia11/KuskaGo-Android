@@ -1,0 +1,15 @@
+# Archivos generados / locales (no se suben a GitHub)
+*.iml
+.gradle/
+.kotlin/
+.idea/
+/build
+/app/build
+/captures
+.externalNativeBuild
+.cxx
+.DS_Store
+
+# local.properties contiene la ruta del SDK y la clave GEMINI_API_KEY: NUNCA subirlo
+/local.properties
+local.properties
