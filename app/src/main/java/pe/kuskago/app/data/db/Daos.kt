@@ -98,3 +98,30 @@ abstract class PasoRutaDao {
         insertarTodos(pasos)
     }
 }
+
+@Dao
+interface DatoUsuarioDao {
+    @Query("SELECT * FROM dato_usuario WHERE dni = :dni ORDER BY clave ASC")
+    fun listar(dni: String): List<DatoUsuarioEntity>
+
+    @Upsert
+    fun guardarTodos(datos: List<DatoUsuarioEntity>)
+
+    @Query("DELETE FROM dato_usuario WHERE dni = :dni AND clave = :clave")
+    fun borrar(dni: String, clave: String)
+}
+
+@Dao
+interface TramiteDao {
+    @Query("SELECT * FROM tramite WHERE dni = :dni ORDER BY actualizado DESC")
+    fun listar(dni: String): List<TramiteEntity>
+
+    @Insert
+    fun insertar(t: TramiteEntity): Long
+
+    @Query("UPDATE tramite SET estado = :estado, progreso = :progreso, actualizado = :ahora WHERE id = :id")
+    fun cambiarEstado(id: Long, estado: String, progreso: Int, ahora: Long)
+
+    @Query("DELETE FROM tramite WHERE id = :id")
+    fun borrar(id: Long)
+}

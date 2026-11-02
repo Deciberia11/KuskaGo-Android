@@ -63,6 +63,11 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import pe.kuskago.app.ui.theme.K
+import pe.kuskago.app.ui.theme.KFont
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Check
 import pe.kuskago.app.ui.theme.SIZE_LABEL
 
 /** Contenedor de pantalla: fondo, barras del sistema y teclado. */
@@ -106,13 +111,14 @@ fun TopBar(
                 .semantics { contentDescription = "Volver" },
             contentAlignment = Alignment.Center,
         ) {
-            Text("←", fontSize = 18.sp, color = K.Ink, fontWeight = FontWeight.Bold)
+            Icon(Icons.Rounded.ArrowBack, null, tint = K.Ink, modifier = Modifier.size(22.dp))
         }
         if (title != null) {
             Text(
                 title,
                 fontSize = titleSize,
-                fontWeight = FontWeight.ExtraBold,
+                fontWeight = FontWeight.Bold,
+                fontFamily = KFont.Title,
                 color = titleColor,
                 modifier = Modifier.weight(1f),
             )
@@ -138,7 +144,7 @@ fun PrimaryButton(
         colors = ButtonDefaults.buttonColors(containerColor = containerColor, contentColor = K.White),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 3.dp, pressedElevation = 1.dp),
     ) {
-        Text(text, fontSize = fontSize, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+        IconLabel(text, fontSize = fontSize, fontWeight = FontWeight.Bold, fontFamily = KFont.Button, textAlign = TextAlign.Center)
     }
 }
 
@@ -162,14 +168,14 @@ fun SecondaryButton(
         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
         colors = ButtonDefaults.outlinedButtonColors(containerColor = K.White, contentColor = contentColor),
     ) {
-        Text(text, fontSize = fontSize, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+        IconLabel(text, fontSize = fontSize, fontWeight = FontWeight.Bold, fontFamily = KFont.Button, textAlign = TextAlign.Center)
     }
 }
 
 @Composable
 fun GhostButton(text: String, onClick: () -> Unit, fontSize: TextUnit = 13.5.sp) {
     TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        Text(text, color = K.Green, fontWeight = FontWeight.Bold, fontSize = fontSize)
+        IconLabel(text, color = K.Green, fontWeight = FontWeight.Bold, fontSize = fontSize, fontFamily = KFont.Button)
     }
 }
 
@@ -205,7 +211,7 @@ fun ErrorCard(title: String, body: String, modifier: Modifier = Modifier) {
         background = K.ErrorBg,
         borderColor = K.ErrorBorder,
     ) {
-        Text(
+        IconLabel(
             "⚠ $title",
             fontWeight = FontWeight.ExtraBold,
             fontSize = 13.5.sp,
@@ -234,7 +240,7 @@ fun KTextField(
     modifier: Modifier = Modifier,
     keyboardType: KeyboardType = KeyboardType.Text,
     password: Boolean = false,
-    textStyle: TextStyle = TextStyle(fontSize = 15.sp, color = K.Ink),
+    textStyle: TextStyle = TextStyle(fontSize = 15.sp, color = K.Ink, fontFamily = KFont.Body),
     placeholderAlign: TextAlign = TextAlign.Start,
     singleLine: Boolean = true,
     minLines: Int = 1,
@@ -273,7 +279,7 @@ fun KTextField(
                         contentDescription = if (visible) "Ocultar contraseña" else "Mostrar contraseña"
                     },
                 ) {
-                    Text(if (visible) "🙈" else "👁", fontSize = 18.sp)
+                    KIcon(if (visible) "🙈" else "👁", size = 22.dp, tint = K.Muted)
                 }
             }
         } else {
@@ -328,7 +334,7 @@ fun CheckboxCard(
                     .border(1.8.dp, if (checked) K.Green else K.Faint, boxShape),
                 contentAlignment = Alignment.Center,
             ) {
-                if (checked) Text("✓", color = K.White, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+                if (checked) Icon(Icons.Rounded.Check, null, tint = K.White, modifier = Modifier.size(18.dp))
             }
         }
         content()
@@ -394,7 +400,8 @@ fun TextSizeSelector(selected: Int, onSelect: (Int) -> Unit) {
 /** Franja de colores andinos. */
 @Composable
 fun AndeanStripe(modifier: Modifier = Modifier) {
-    val colors = listOf(K.Terracota, K.Mustard, K.Sky, K.Green)
+    // Franja andina: terracota · oro · celeste · verde
+    val colors = listOf(K.Terracota, K.Oro, K.Celeste, K.Verde)
     Canvas(
         modifier = modifier
             .fillMaxWidth()
@@ -432,12 +439,22 @@ fun BottomNav(items: List<NavEntry>) {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(3.dp),
                 ) {
-                    Text(item.icon, fontSize = 18.sp)
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(if (item.active) K.Menta else Color.Transparent)
+                            .padding(horizontal = 18.dp, vertical = 4.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        navIcon(item.icon, item.active)?.let {
+                            Icon(it, null, tint = if (item.active) K.VerdeOscuro else K.Muted, modifier = Modifier.size(24.dp))
+                        }
+                    }
                     Text(
                         item.label,
                         fontSize = 10.5.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (item.active) K.Green else K.Muted2,
+                        color = if (item.active) K.VerdeOscuro else K.Muted,
                     )
                 }
             }
@@ -460,7 +477,7 @@ fun IconBox(icon: String, description: String, onClick: () -> Unit, badge: Strin
                 .semantics { contentDescription = description },
             contentAlignment = Alignment.Center,
         ) {
-            Text(icon, fontSize = 17.sp)
+            KIcon(icon, size = 22.dp, tint = K.Ink)
         }
         if (badge != null) {
             Box(
@@ -489,7 +506,7 @@ fun Chip(text: String, background: Color, color: Color) {
             .background(background)
             .padding(horizontal = 11.dp, vertical = 5.dp),
     ) {
-        Text(text, fontSize = 11.5.sp, fontWeight = FontWeight.ExtraBold, color = color)
+        IconLabel(text, fontSize = 11.5.sp, fontWeight = FontWeight.ExtraBold, color = color)
     }
 }
 
@@ -512,7 +529,7 @@ fun SuccessCheck(size: Dp = 84.dp) {
             }
             drawPath(
                 path,
-                color = K.Green,
+                color = K.Selva,
                 style = Stroke(width = 3f * s, cap = StrokeCap.Round, join = StrokeJoin.Round),
             )
         }

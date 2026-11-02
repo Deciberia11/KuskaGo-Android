@@ -53,11 +53,14 @@ import pe.kuskago.app.ui.components.SectionLabel
 import pe.kuskago.app.ui.components.TopBar
 import pe.kuskago.app.ui.components.toast
 import pe.kuskago.app.ui.theme.K
+import pe.kuskago.app.ui.theme.KFont
+import pe.kuskago.app.ui.components.IconLabel
+import pe.kuskago.app.ui.components.KIcon
 import pe.kuskago.app.ui.theme.textScale
 import java.text.Normalizer
 
 @Composable
-private fun BrandHeader(trailing: @Composable () -> Unit) {
+private fun BrandHeader(onColor: Boolean = false, trailing: @Composable () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -70,7 +73,7 @@ private fun BrandHeader(trailing: @Composable () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(9.dp),
         ) {
             Image(painterResource(R.drawable.ic_logo), null, Modifier.size(26.dp))
-            Text("KuskaGo", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = K.GreenDark, letterSpacing = (-0.3).sp)
+            Text("KuskaGo", fontFamily = KFont.Title, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = if (onColor) K.White else K.GreenDark, letterSpacing = (-0.3).sp)
         }
         trailing()
     }
@@ -83,30 +86,26 @@ private fun BrandHeader(trailing: @Composable () -> Unit) {
 fun HomeScreen(store: KuskaStore, go: (Route) -> Unit) {
     val profile = remember { store.getProfile() }
     val prefs = remember { store.getPrefs(store.currentUser()?.dni.orEmpty()) }
-    val scale = prefs.textScale()
+    val scale = 1f   // el "Texto grande" ya se aplica a toda la app desde MainActivity
     val contrast = prefs?.contrast == true
     val firstName = profile.name.trim().split(" ").firstOrNull().orEmpty().ifEmpty { "vecino" }
     val textColor = if (contrast) K.White else K.Ink
 
     Screen(background = if (contrast) K.ContrastBg else K.Bg) {
-        BrandHeader {
+        BrandHeader(onColor = contrast) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                IconBox("🔔", "Avisos", { go(Route.Alerts) }, badge = "2")
+                val pending = remember { buildAlerts(store).count { it.kind != "info" } }
+                IconBox("🔔", "Avisos", { go(Route.Alerts) }, badge = if (pending > 0) "$pending" else null)
                 IconBox("👤", "Perfil", { go(Route.Profile) })
             }
         }
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 6.dp),
-        ) {
+        Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 18.dp)) {
             Row(
                 modifier = Modifier.padding(bottom = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Image(painterResource(R.drawable.img_avatar), null, Modifier.size(52.dp).clip(CircleShape))
+                Image(painterResource(R.drawable.img_avatar), null, Modifier.size(52.dp).clip(CircleShape).background(K.Menta))
                 Column(Modifier.weight(1f)) {
                     Text("¡Hola, $firstName!", fontSize = (20 * scale).sp, fontWeight = FontWeight.ExtraBold, color = textColor)
                     Text("¿En qué podemos ayudarte hoy?", fontSize = 13.5.sp, color = if (contrast) K.Faint else K.Muted, fontWeight = FontWeight.SemiBold)
@@ -120,19 +119,25 @@ fun HomeScreen(store: KuskaStore, go: (Route) -> Unit) {
                     .heightIn(min = 52.dp)
                     .clip(barShape)
                     .background(K.White)
-                    .border(1.5.dp, K.Border, barShape)
+                    .border(1.5.dp, K.GreenSoftBorder, barShape)
                     .clickable(role = Role.Button) { go(Route.Search) }
                     .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("🔍  Busca un trámite, documento o servicio", color = K.Muted2, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                IconLabel("🔍  Busca un trámite, documento o servicio", color = K.Muted2, iconColor = K.Verde, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
             }
-            Spacer(Modifier.height(18.dp))
+        }
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 6.dp),
+        ) {
 
-            val cardFont = (13.5f * scale).sp
+            val cardFont = (15f * scale).sp
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(bottom = 12.dp)) {
-                HomeTile("📄", "Buscar trámite", K.GreenSoft, K.GreenSoftBorder, K.GreenDark, cardFont, Modifier.weight(1f)) { go(Route.Search) }
-                HomeTile("🗂️", "Mis trámites", K.SkyBg, K.SkyBorder, K.SkyText, cardFont, Modifier.weight(1f)) { go(Route.TramiteDetail) }
+                HomeTile("📄", "Buscar trámite", K.Menta, K.GreenSoftBorder, K.VerdeOscuro, cardFont, Modifier.weight(1f)) { go(Route.Search) }
+                HomeTile("🗂️", "Mis trámites", K.SkyBg, K.SkyBorder, K.SkyText, cardFont, Modifier.weight(1f)) { go(Route.MyTramites) }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(bottom = 12.dp)) {
                 HomeTile("📁", "Mis documentos", K.MustardBg, K.MustardBorder, K.MustardText, cardFont, Modifier.weight(1f)) { go(Route.Documents) }
@@ -140,10 +145,10 @@ fun HomeScreen(store: KuskaStore, go: (Route) -> Unit) {
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 16.dp)) {
-                QuickAction("🧭", "Ruta Ciudadana", Modifier.weight(1f)) { go(Route.CitizenRoute) }
-                QuickAction("🔔", "KuskaAlert", Modifier.weight(1f)) { go(Route.Alerts) }
-                QuickAction("🆘", "Pedir ayuda", Modifier.weight(1f)) { go(Route.Help) }
-                QuickAction("🗣️", "Traductor", Modifier.weight(1f)) { go(Route.Translator) }
+                QuickAction("🧭", "Ruta Ciudadana", K.Verde, Modifier.weight(1f)) { go(Route.CitizenRoute) }
+                QuickAction("🔔", "KuskaAlert", K.Rojo, Modifier.weight(1f)) { go(Route.Alerts) }
+                QuickAction("🙋", "Pedir ayuda", K.Terracota, Modifier.weight(1f)) { go(Route.Help) }
+                QuickAction("🗣️", "Traductor", K.Celeste, Modifier.weight(1f)) { go(Route.Translator) }
             }
 
             KCard(
@@ -153,12 +158,12 @@ fun HomeScreen(store: KuskaStore, go: (Route) -> Unit) {
                 onClick = { go(Route.TramiteDetail) },
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("🚌", fontSize = 22.sp)
+                    KIcon("🚌", size = 28.dp, tint = K.Green)
                     Column(Modifier.weight(1f)) {
                         Text("No viajes todavía", fontWeight = FontWeight.ExtraBold, fontSize = 13.5.sp, color = K.Ink)
-                        Text("Te ayudamos a verificar que tengas todo antes de desplazarte", fontSize = 12.sp, color = Color(0xFF4B6E62))
+                        Text("Te ayudamos a verificar que tengas todo antes de desplazarte", fontSize = 12.sp, color = K.Muted)
                     }
-                    Text("›", color = K.Green, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
+                    Text("›", color = K.Green, fontWeight = FontWeight.ExtraBold, fontFamily = KFont.Title, fontSize = 20.sp)
                 }
             }
             Spacer(Modifier.height(14.dp))
@@ -185,13 +190,13 @@ private fun HomeTile(
         onClick = onClick,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(icon, fontSize = 22.sp)
+        KIcon(icon, size = 34.dp, tint = textColor)
         Text(label, fontWeight = FontWeight.ExtraBold, fontSize = fontSize, color = textColor)
     }
 }
 
 @Composable
-private fun QuickAction(icon: String, label: String, modifier: Modifier, onClick: () -> Unit) {
+private fun QuickAction(icon: String, label: String, color: Color, modifier: Modifier, onClick: () -> Unit) {
     KCard(
         modifier = modifier.heightIn(min = 72.dp),
         onClick = onClick,
@@ -199,7 +204,7 @@ private fun QuickAction(icon: String, label: String, modifier: Modifier, onClick
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Text(icon, fontSize = 18.sp)
+        KIcon(icon, size = 28.dp, tint = color)
         Text(label, fontWeight = FontWeight.Bold, fontSize = 10.5.sp, color = K.Ink, textAlign = TextAlign.Center, lineHeight = 13.sp)
     }
 }
@@ -217,9 +222,9 @@ fun HomeSimpleScreen(go: (Route) -> Unit, onNormalMode: () -> Unit) {
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 14.dp),
         ) {
-            Text("¿Qué necesitas?", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = K.Ink, modifier = Modifier.padding(bottom = 22.dp))
+            Text("¿Qué necesitas?", fontFamily = KFont.Title, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = K.Ink, modifier = Modifier.padding(bottom = 22.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.padding(bottom = 14.dp)) {
-                SimpleTile("📄", "Continuar mi trámite", K.OkBg, Color(0xFFBFE2D2), Modifier.weight(1f)) { go(Route.SimpleFlow) }
+                SimpleTile("📄", "Continuar mi trámite", K.Menta, K.GreenSoftBorder, Modifier.weight(1f)) { go(Route.SimpleFlow) }
                 SimpleTile("🔔", "Ver avisos", K.SkyBg, K.SkyBorder, Modifier.weight(1f)) { go(Route.Alerts) }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -244,8 +249,9 @@ private fun SimpleTile(icon: String, label: String, bg: Color, border: Color, mo
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically),
     ) {
-        Text(icon, fontSize = 34.sp)
-        Text(label, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, color = K.Ink, textAlign = TextAlign.Center)
+        val fg = when (bg) { K.SkyBg -> K.SkyText; K.OrangeBg -> K.TerracotaText; K.PurpleBg -> K.PurpleText; else -> K.VerdeOscuro }
+        KIcon(icon, size = 46.dp, tint = fg)
+        Text(label, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = fg, textAlign = TextAlign.Center)
     }
 }
 
@@ -303,7 +309,7 @@ fun SearchScreen(onBack: () -> Unit, go: (Route) -> Unit, onPick: (String) -> Un
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    Text("🔍", fontSize = 32.sp)
+                    KIcon("🔍", size = 40.dp, tint = K.Muted)
                     Text("No encontramos \"$query\"", fontWeight = FontWeight.Bold, fontSize = 14.5.sp, color = K.Muted, textAlign = TextAlign.Center)
                     Text("Prueba con otra palabra, como \"terreno\" o \"DNI\".", fontSize = 12.5.sp, color = K.Muted, textAlign = TextAlign.Center)
                 }
@@ -338,7 +344,7 @@ fun ProfileScreen(
         ) {
             if (showUpdated) {
                 KCard(Modifier.fillMaxWidth().padding(bottom = 14.dp), background = K.GreenSoft, borderColor = K.GreenSoftBorder) {
-                    Text("✓  Tus datos se actualizaron correctamente.", fontSize = 12.5.sp, color = K.GreenDark, fontWeight = FontWeight.Bold)
+                    IconLabel("✓  Tus datos se actualizaron correctamente.", fontSize = 12.5.sp, color = K.GreenDark, fontWeight = FontWeight.Bold)
                 }
             }
             Row(
@@ -348,7 +354,7 @@ fun ProfileScreen(
             ) {
                 Image(painterResource(R.drawable.img_avatar), null, Modifier.size(60.dp).clip(CircleShape))
                 Column {
-                    Text(p.name, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, color = K.Ink)
+                    Text(p.name, fontWeight = FontWeight.ExtraBold, fontFamily = KFont.Title, fontSize = 17.sp, color = K.Ink)
                     Text("DNI ${p.dni} · ${p.place} · ${p.phone}", fontSize = 12.5.sp, color = K.Muted)
                 }
             }
@@ -361,6 +367,7 @@ fun ProfileScreen(
                 context.toast("Quechua y Aimara: disponibles próximamente")
             }
             SectionLabel("Mis datos", Modifier.padding(top = 18.dp))
+            ListItemRow(null, "Mis trámites") { go(Route.MyTramites) }
             ListItemRow(null, "Mis documentos") { go(Route.Documents) }
             ListItemRow(null, "Familia") { go(Route.Family) }
             SectionLabel("Otros", Modifier.padding(top = 18.dp))

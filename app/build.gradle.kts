@@ -70,12 +70,20 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
+    // Íconos de Material (Google) en lugar de emojis
+    implementation("androidx.compose.material:material-icons-extended")
 
     // Base de datos local SQLite con Room
     val roomVersion = "2.6.1"
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
     ksp("androidx.room:room-compiler:$roomVersion")
+
+    // Leer el texto del DNI con la cámara (ML Kit, gratis y sin internet; el modelo va dentro de la app)
+    implementation("com.google.mlkit:text-recognition:16.0.1")
+
+    // Mapa real con OpenStreetMap (gratis, sin clave)
+    implementation("org.osmdroid:osmdroid-android:6.1.20")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

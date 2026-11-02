@@ -5,7 +5,7 @@
         <item name="android:colorAccent">@color/kuskago_green</item>
     </style>
 
-    <color name="kuskago_bg">#FAF7F1</color>
-    <color name="kuskago_green">#176B57</color>
-    <color name="ic_launcher_background">#DCEFE6</color>
+    <color name="kuskago_bg">#FFFAF0</color>
+    <color name="kuskago_green">#0B7A55</color>
+    <color name="ic_launcher_background">#0B7A55</color>
 </resources>

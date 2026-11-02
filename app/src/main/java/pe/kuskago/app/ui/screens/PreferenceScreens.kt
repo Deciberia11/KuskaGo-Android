@@ -37,6 +37,8 @@ import pe.kuskago.app.ui.components.TextSizeSelector
 import pe.kuskago.app.ui.components.TopBar
 import pe.kuskago.app.ui.components.rememberSpeaker
 import pe.kuskago.app.ui.theme.K
+import pe.kuskago.app.ui.components.IconLabel
+import pe.kuskago.app.ui.components.KIcon
 import pe.kuskago.app.ui.theme.buttonScale
 import pe.kuskago.app.ui.theme.textScale
 
@@ -118,7 +120,7 @@ fun PreferencesScreen(
                     modifier = Modifier.padding(bottom = 10.dp),
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text(
+                        IconLabel(
                             "${key.icon}  ${key.title}",
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = px(15f),
@@ -164,7 +166,7 @@ fun PreferencesScreen(
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = K.Green, contentColor = K.White),
                     ) {
-                        Text("🔊 Escuchar explicación", fontWeight = FontWeight.ExtraBold, fontSize = (14.5f * btnScale).sp)
+                        IconLabel("🔊 Escuchar explicación", fontWeight = FontWeight.ExtraBold, fontSize = (14.5f * btnScale).sp)
                     }
                 }
                 if (p.translate) {
@@ -236,7 +238,7 @@ fun AccessibilityScreen(store: KuskaStore, onBack: () -> Unit) {
                     modifier = Modifier.padding(bottom = 10.dp),
                 ) {
                     Row(Modifier.weight(1f)) {
-                        Text(
+                        IconLabel(
                             "${key.icon}  ${key.shortTitle}",
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 15.sp,

@@ -3,6 +3,10 @@
 
     <!-- Para la explicación con IA (Ollama en tu PC o Gemini). El resto de la app funciona sin internet. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Mapa (OpenStreetMap): estado de red para descargar el mapa y ubicación para "Mi ubicación" (opcional) -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
     <!-- Necesario en Android 11+ para encontrar el motor de Texto a Voz ("Escuchar explicación") -->
     <queries>
@@ -20,6 +24,17 @@
         android:theme="@style/Theme.KuskaGo"
         android:usesCleartextTraffic="true">
         <!-- usesCleartextTraffic: Ollama en la red local usa http:// (sin https). Solo para el prototipo. -->
+        <!-- Para guardar temporalmente la foto del DNI que toma la cámara (se borra al leerla) -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

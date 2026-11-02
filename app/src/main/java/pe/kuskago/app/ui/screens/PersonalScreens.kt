@@ -81,15 +81,20 @@ import pe.kuskago.app.ui.components.printHtml
 import pe.kuskago.app.ui.components.rememberSpeaker
 import pe.kuskago.app.ui.components.shareFile
 import pe.kuskago.app.ui.components.toast
+import pe.kuskago.app.ui.components.ScanDniCard
+import pe.kuskago.app.ui.components.UseMyLocationButton
 import pe.kuskago.app.ui.theme.K
+import pe.kuskago.app.ui.theme.KFont
+import pe.kuskago.app.ui.components.IconLabel
+import pe.kuskago.app.ui.components.KIcon
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private val WarnBg = Color(0xFFFDF0DE)
-private val WarnText = Color(0xFFB4530A)
-private val UrgentBg = Color(0xFFFDE2E1)
-private val UrgentText = Color(0xFFB42318)
+private val WarnBg = K.WarnBg
+private val WarnText = K.WarnText
+private val UrgentBg = K.ErrorBg
+private val UrgentText = K.ErrorTitle
 
 private fun nowLabel(): String = SimpleDateFormat("d MMM yyyy", Locale.forLanguageTag("es-PE")).format(Date())
 
@@ -187,9 +192,9 @@ fun DocumentsScreen(store: KuskaStore, onExit: () -> Unit, go: (Route) -> Unit) 
                             KCard(Modifier.fillMaxWidth().padding(bottom = 20.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Box(
-                                        Modifier.size(52.dp).clip(RoundedCornerShape(12.dp)).background(K.GreenSoft),
+                                        Modifier.size(52.dp).clip(RoundedCornerShape(12.dp)).background(K.Menta),
                                         contentAlignment = Alignment.Center,
-                                    ) { Text(d.icon, fontSize = 22.sp) }
+                                    ) { KIcon(d.icon, size = 28.dp, tint = K.Verde) }
                                     Column {
                                         Text(d.name, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, color = K.Ink)
                                         Text(d.meta, fontSize = 12.sp, color = K.Muted)
@@ -226,7 +231,7 @@ fun DocumentsScreen(store: KuskaStore, onExit: () -> Unit, go: (Route) -> Unit) 
 
                     "form" -> {
                         KCard(Modifier.fillMaxWidth().padding(bottom = 16.dp), background = K.GreenSoft, borderColor = K.GreenSoftBorder) {
-                            Text("✓  Archivo cargado: $pendingFile", fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = K.GreenDark)
+                            IconLabel("✓  Archivo cargado: $pendingFile", fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = K.GreenDark)
                         }
                         FieldLabel("Nombre del documento")
                         KTextField(docName, { docName = it }, "Ej. Constancia de posesión", Modifier.padding(bottom = 14.dp))
@@ -382,7 +387,7 @@ fun FamilyScreen(store: KuskaStore, onExit: () -> Unit, go: (Route) -> Unit, onF
                         SectionLabel("Trámite sugerido", Modifier.padding(top = 8.dp, bottom = 8.dp))
                         KCard(Modifier.fillMaxWidth()) {
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Text("🏛️", fontSize = 22.sp)
+                                KIcon("🏛️", size = 28.dp, tint = K.Green)
                                 Column {
                                     Text("Herencia / Sucesión", fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = K.Ink)
                                     Text("Registro de sucesión intestada", fontSize = 12.sp, color = K.Muted)
@@ -513,14 +518,6 @@ private val ROUTE_EXPLAIN = mapOf(
     5 to "Cuando la entidad responda, te avisaremos con KuskaAlert para que recojas tu resultado.",
 )
 
-private data class Point(val name: String, val addr: String, val dist: String, val query: String)
-
-private val POINTS = listOf(
-    Point("Municipalidad de tu distrito", "Jr. Principal 100, tu distrito", "1.2 km", "Municipalidad distrital"),
-    Point("COFOPRI — Oficina zonal", "Jr. Los Álamos 123", "3.4 km", "COFOPRI oficina zonal"),
-    Point("Banco de la Nación", "Av. Comercio 456", "2.0 km", "Banco de la Nación"),
-)
-
 @Composable
 fun CitizenRouteScreen(store: KuskaStore, onExit: () -> Unit, go: (Route) -> Unit, onEntity: () -> Unit) {
     val context = LocalContext.current
@@ -537,7 +534,10 @@ fun CitizenRouteScreen(store: KuskaStore, onExit: () -> Unit, go: (Route) -> Uni
             onBack = { if (view != "list") view = "list" else onExit() },
             title = when (view) { "list" -> "Tu ruta ciudadana"; "map" -> "Puntos de atención"; else -> "Paso de tu ruta" },
         )
-        Box(Modifier.weight(1f)) {
+        if (view == "map") {
+            // Mapa real (OpenStreetMap) con los puntos de atención del distrito del usuario
+            Box(Modifier.weight(1f)) { RouteMapSection(store) }
+        } else Box(Modifier.weight(1f)) {
             Scroll {
                 when (view) {
                     "list" -> {
@@ -565,27 +565,11 @@ fun CitizenRouteScreen(store: KuskaStore, onExit: () -> Unit, go: (Route) -> Uni
                         SecondaryButton("📍 Ver mapa y puntos de atención", { view = "map" }, minHeight = 46.dp, fontSize = 14.sp)
                     }
 
-                    "map" -> {
-                        MapPlaceholder()
-                        POINTS.forEach { p ->
-                            KCard(Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
-                                Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    Column(Modifier.weight(1f)) {
-                                        Text(p.name, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = K.Ink)
-                                        Text(p.addr, fontSize = 12.sp, color = K.Muted)
-                                    }
-                                    Chip(p.dist, K.SkyBg, K.SkyText)
-                                }
-                                SecondaryButton("Cómo llegar", {
-                                    context.openUrl("https://www.google.com/maps/search/?api=1&query=" + Uri.encode(p.query))
-                                }, minHeight = 42.dp, fontSize = 14.sp)
-                            }
-                        }
-                    }
+                    "map" -> {}
 
                     else -> {
                         val isDone = selected in done
-                        Text(ROUTE_NAMES.getValue(selected), fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, color = K.Ink, modifier = Modifier.padding(bottom = 6.dp))
+                        Text(ROUTE_NAMES.getValue(selected), fontWeight = FontWeight.ExtraBold, fontFamily = KFont.Title, fontSize = 17.sp, color = K.Ink, modifier = Modifier.padding(bottom = 6.dp))
                         Box(Modifier.padding(bottom = 18.dp)) {
                             if (isDone) Chip("Completado", K.OkBg, K.GreenDark) else Chip("Pendiente", WarnBg, WarnText)
                         }
@@ -616,36 +600,16 @@ fun CitizenRouteScreen(store: KuskaStore, onExit: () -> Unit, go: (Route) -> Uni
     }
 }
 
-@Composable
-private fun MapPlaceholder() {
-    val shape = RoundedCornerShape(16.dp)
-    BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(160.dp)
-            .padding(bottom = 0.dp)
-            .clip(shape)
-            .border(1.5.dp, K.Border, shape)
-            .background(Brush.linearGradient(listOf(K.Mint, K.GreenSoft))),
-    ) {
-        val w = maxWidth
-        val h = maxHeight
-        listOf(0.28f to 0.40f, 0.55f to 0.60f, 0.72f to 0.28f).forEach { (x, y) ->
-            Text("📍", fontSize = 26.sp, modifier = Modifier.offset(x = w * x, y = h * y))
-        }
-    }
-    Spacer(Modifier.height(16.dp))
-}
-
 // =============================================================
 // 16. KUSKAALERT (avisos)
 // =============================================================
-private data class Alert(
+internal data class Alert(
     val id: String, val kind: String, val chip: String, val when_: String,
     val title: String, val summary: String, val body: String, val action: String, val route: Route,
 )
 
-private val ALERTS = listOf(
+/** Avisos de ejemplo del prototipo (sobre el trámite "Registro de terreno" en curso). */
+private val DEMO_ALERTS = listOf(
     Alert(
         "urgent", "urgent", "URGENTE", "Hace 1 hora", "Tienes 2 días para responder una observación",
         "La entidad encontró un documento que debes corregir.",
@@ -666,6 +630,54 @@ private val ALERTS = listOf(
     ),
 )
 
+private fun relativeDay(ms: Long): String {
+    val days = ((System.currentTimeMillis() - ms) / 86_400_000L).toInt()
+    return when {
+        days <= 0 -> "Hoy"
+        days == 1 -> "Ayer"
+        else -> "Hace $days días"
+    }
+}
+
+/**
+ * Avisos reales a partir de "Mis trámites" + los avisos de ejemplo del prototipo.
+ *  - Documento listo hace 3 días o más sin presentar → URGENTE
+ *  - Documento listo                                → IMPORTANTE
+ *  - Presentado, esperando respuesta                → INFORMATIVA
+ */
+internal fun buildAlerts(store: KuskaStore): List<Alert> {
+    val real = store.getTramites().mapNotNull { t ->
+        val days = ((System.currentTimeMillis() - t.updated) / 86_400_000L).toInt()
+        when (t.status) {
+            KuskaStore.STATUS_GENERATED -> if (days >= 3) Alert(
+                "t${t.id}", "urgent", "URGENTE", relativeDay(t.updated),
+                "No olvides presentar: ${t.title}",
+                "Tu documento está listo hace $days días y aún no lo presentas.",
+                "Tu solicitud de ${t.title} ya está lista. Imprímela, fírmala y preséntala en ${t.entity}. " +
+                    "Cuando lo hagas, márcala como presentada en Mis trámites.",
+                "Ver en Mis trámites", Route.MyTramites,
+            ) else Alert(
+                "t${t.id}", "important", "IMPORTANTE", relativeDay(t.updated),
+                "Tu documento está listo: ${t.title}",
+                "Imprímelo, fírmalo y preséntalo en ${t.entity}.",
+                "Generaste tu solicitud de ${t.title}. El siguiente paso es presentarla en ${t.entity}. " +
+                    "Antes de viajar, revisa que tengas todos los requisitos.",
+                "Ver en Mis trámites", Route.MyTramites,
+            )
+            KuskaStore.STATUS_SUBMITTED -> Alert(
+                "t${t.id}", "info", "INFORMATIVA", relativeDay(t.updated),
+                "Esperando respuesta: ${t.title}",
+                "${t.entity} está revisando tu solicitud.",
+                "Presentaste tu solicitud de ${t.title} en ${t.entity}. Cuando recibas la respuesta, márcala en Mis trámites.",
+                "Ver en Mis trámites", Route.MyTramites,
+            )
+            else -> null
+        }
+    }
+    val hasDemo = store.getTramites().any { it.status == KuskaStore.STATUS_IN_PROGRESS }
+    return real + if (hasDemo) DEMO_ALERTS else emptyList()
+}
+
 private fun alertColors(kind: String): Pair<Color, Color> = when (kind) {
     "urgent" -> UrgentBg to UrgentText
     "important" -> WarnBg to WarnText
@@ -673,13 +685,14 @@ private fun alertColors(kind: String): Pair<Color, Color> = when (kind) {
 }
 
 @Composable
-fun AlertsScreen(onExit: () -> Unit, go: (Route) -> Unit) {
+fun AlertsScreen(store: KuskaStore, onExit: () -> Unit, go: (Route) -> Unit) {
+    val alerts = remember { buildAlerts(store) }
     val context = LocalContext.current
     var filter by rememberSaveable { mutableStateOf("all") }
     var openId by rememberSaveable { mutableStateOf<String?>(null) }
 
     BackHandler(enabled = openId != null) { openId = null }
-    val open = ALERTS.firstOrNull { it.id == openId }
+    val open = alerts.firstOrNull { it.id == openId }
 
     Screen {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -695,13 +708,13 @@ fun AlertsScreen(onExit: () -> Unit, go: (Route) -> Unit) {
                     .border(1.dp, K.Border, RoundedCornerShape(10.dp))
                     .clickable(role = Role.Button) { go(Route.Profile) },
                 contentAlignment = Alignment.Center,
-            ) { Text("⚙️", fontSize = 16.sp) }
+            ) { KIcon("⚙️", size = 22.dp, tint = K.Ink) }
         }
         if (open == null) {
             val counts = mapOf(
-                "all" to ALERTS.size,
-                "important" to ALERTS.count { it.kind == "important" },
-                "urgent" to ALERTS.count { it.kind == "urgent" },
+                "all" to alerts.size,
+                "important" to alerts.count { it.kind == "important" },
+                "urgent" to alerts.count { it.kind == "urgent" },
             )
             PillTabs(
                 tabs = listOf(
@@ -716,7 +729,10 @@ fun AlertsScreen(onExit: () -> Unit, go: (Route) -> Unit) {
         Box(Modifier.weight(1f)) {
             Scroll {
                 if (open == null) {
-                    ALERTS.filter { filter == "all" || it.kind == filter }.forEach { a ->
+                    if (alerts.isEmpty()) {
+                        IconLabel("🎉 No tienes avisos por ahora.", fontSize = 14.sp, color = K.Muted, modifier = Modifier.padding(vertical = 30.dp))
+                    }
+                    alerts.filter { filter == "all" || it.kind == filter }.forEach { a ->
                         val (bg, fg) = alertColors(a.kind)
                         KCard(
                             Modifier.fillMaxWidth().padding(bottom = 10.dp),
@@ -732,7 +748,7 @@ fun AlertsScreen(onExit: () -> Unit, go: (Route) -> Unit) {
                 } else {
                     val (bg, fg) = alertColors(open.kind)
                     Box(Modifier.padding(bottom = 16.dp)) { Chip(open.chip, bg, fg) }
-                    Text(open.title, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = K.Ink, lineHeight = 25.sp, modifier = Modifier.padding(bottom = 10.dp))
+                    Text(open.title, fontFamily = KFont.Title, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = K.Ink, lineHeight = 25.sp, modifier = Modifier.padding(bottom = 10.dp))
                     Text(open.body, fontSize = 13.5.sp, color = K.Label, lineHeight = 21.sp, modifier = Modifier.padding(bottom = 24.dp))
                     PrimaryButton(open.action, { go(open.route) })
                     SectionLabel("Recordarme", Modifier.padding(top = 18.dp, bottom = 4.dp))
@@ -761,7 +777,9 @@ fun EditProfileScreen(store: KuskaStore, onBack: () -> Unit, onSaved: () -> Unit
     var name by rememberSaveable { mutableStateOf(p.name) }
     var phone by rememberSaveable { mutableStateOf(p.phone.filter { it.isDigit() }) }
     var place by rememberSaveable { mutableStateOf(p.place) }
+    var home by rememberSaveable { mutableStateOf(store.getPersonalData()["domicilio"].orEmpty()) }
     var error by remember { mutableStateOf<String?>(null) }
+    val savedData = remember { mutableStateListOf<Pair<String, String>>().apply { addAll(store.getSavedTramiteData()) } }
 
     Screen {
         TopBar(onBack = onBack, title = "Editar datos")
@@ -775,6 +793,15 @@ fun EditProfileScreen(store: KuskaStore, onBack: () -> Unit, onSaved: () -> Unit
                 }
                 GhostButton("Cambiar foto", { context.toast("Cambiar foto: disponible próximamente") }, fontSize = 13.sp)
                 error?.let { ErrorCard("Revisa tus datos", it, Modifier.padding(bottom = 14.dp)) }
+                ScanDniCard(
+                    onResult = { d ->
+                        d.fullName?.let { name = it }
+                        d.address?.let { home = it }
+                        d.district?.let { place = it }
+                        error = null
+                    },
+                    modifier = Modifier.padding(bottom = 18.dp),
+                )
                 FieldLabel("Nombres completos")
                 KTextField(name, { name = it; error = null }, "Ej. Juan Quispe", Modifier.padding(bottom = 16.dp))
                 FieldLabel("DNI", extra = "(no se puede cambiar)")
@@ -783,6 +810,15 @@ fun EditProfileScreen(store: KuskaStore, onBack: () -> Unit, onSaved: () -> Unit
                 KTextField(
                     phone, { phone = it.filter { c -> c.isDigit() }.take(9); error = null }, "9xx xxx xxx",
                     Modifier.padding(bottom = 16.dp), keyboardType = KeyboardType.Phone,
+                )
+                FieldLabel("Dirección de tu casa")
+                KTextField(home, { home = it }, "Jr./Av., número, barrio", Modifier.padding(bottom = 8.dp))
+                UseMyLocationButton(
+                    onResult = { g ->
+                        g.address?.let { home = it }
+                        g.district?.let { place = it }
+                    },
+                    modifier = Modifier.padding(bottom = 16.dp),
                 )
                 FieldLabel("Comunidad / distrito")
                 KTextField(place, { place = it; error = null }, "Ej. Puno", Modifier.padding(bottom = 26.dp))
@@ -795,9 +831,37 @@ fun EditProfileScreen(store: KuskaStore, onBack: () -> Unit, onSaved: () -> Unit
                     }
                     if (error == null) {
                         store.saveProfile(name.trim(), phone, place.trim())
+                        if (home.isNotBlank()) store.savePersonalData(mapOf("domicilio" to home))
                         onSaved()
                     }
                 })
+
+                // ---- Datos que la app recuerda para los trámites ----
+                Spacer(Modifier.height(28.dp))
+                SectionLabel("Datos guardados para tus trámites", Modifier.padding(bottom = 4.dp))
+                Text(
+                    "Los usamos para no volver a preguntarte lo mismo. Puedes borrar cualquiera.",
+                    fontSize = 12.5.sp, color = K.Muted, modifier = Modifier.padding(bottom = 6.dp),
+                )
+                if (savedData.isEmpty()) {
+                    Text(
+                        "Todavía no hay datos guardados. Se guardan solos cuando completas un trámite.",
+                        fontSize = 12.5.sp, color = K.Muted2, modifier = Modifier.padding(vertical = 8.dp),
+                    )
+                }
+                savedData.forEach { (key, value) ->
+                    ListItemRow(
+                        icon = null,
+                        title = KuskaStore.PERSONAL_LABELS[key] ?: key,
+                        subtitle = value,
+                        trailing = "Borrar",
+                        trailingColor = K.ErrorTitle,
+                    ) {
+                        store.deletePersonalData(key)
+                        savedData.removeAll { it.first == key }
+                        context.toast("Dato borrado")
+                    }
+                }
             }
         }
     }
@@ -841,17 +905,17 @@ fun SimpleFlowScreen(onExit: () -> Unit, go: (Route) -> Unit) {
                             contentPadding = PaddingValues(20.dp),
                         ) {
                             Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Text("🏞️", fontSize = 30.sp)
-                                Text("Registro de terreno", fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, color = K.Ink)
+                                KIcon("🏞️", size = 38.dp, tint = K.Green)
+                                Text("Registro de terreno", fontWeight = FontWeight.ExtraBold, fontFamily = KFont.Title, fontSize = 17.sp, color = K.Ink)
                             }
                         }
                         ListenButton("🔊 Escuchar opciones", say)
                     }
 
                     "detail" -> {
-                        Text("Registro de terreno", fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = K.Ink, modifier = Modifier.padding(bottom = 14.dp))
+                        Text("Registro de terreno", fontFamily = KFont.Title, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = K.Ink, modifier = Modifier.padding(bottom = 14.dp))
                         KCard(Modifier.fillMaxWidth().padding(bottom = 18.dp), background = K.GreenSoft, borderColor = K.GreenSoftBorder) {
-                            Text("Vas 60% listo 👍", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = K.Ink, modifier = Modifier.padding(bottom = 10.dp))
+                            IconLabel("👍 Vas 60% listo", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = K.Ink, modifier = Modifier.padding(bottom = 10.dp))
                             KProgress(0.6f)
                         }
                         BigButton("Ver qué me falta") { step = "req" }
@@ -859,10 +923,10 @@ fun SimpleFlowScreen(onExit: () -> Unit, go: (Route) -> Unit) {
                     }
 
                     "req" -> {
-                        Text("Te falta esto:", fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = K.Ink, modifier = Modifier.padding(bottom = 16.dp))
+                        Text("Te falta esto:", fontFamily = KFont.Title, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = K.Ink, modifier = Modifier.padding(bottom = 16.dp))
                         KCard(Modifier.fillMaxWidth().padding(bottom = 14.dp), contentPadding = PaddingValues(18.dp)) {
                             Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Text("📜", fontSize = 26.sp)
+                                KIcon("📜", size = 34.dp, tint = K.Green)
                                 Text("Constancia de posesión", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = K.Ink)
                             }
                         }
@@ -871,7 +935,7 @@ fun SimpleFlowScreen(onExit: () -> Unit, go: (Route) -> Unit) {
                     }
 
                     "route" -> {
-                        Text("Sigue estos pasos:", fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = K.Ink, modifier = Modifier.padding(bottom = 16.dp))
+                        Text("Sigue estos pasos:", fontFamily = KFont.Title, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = K.Ink, modifier = Modifier.padding(bottom = 16.dp))
                         listOf(
                             Triple("✓", 2, "Ve a tu municipalidad"),
                             Triple("2", 1, "Pide la constancia"),
@@ -898,8 +962,8 @@ fun SimpleFlowScreen(onExit: () -> Unit, go: (Route) -> Unit) {
                             Box(
                                 Modifier.size(80.dp).clip(CircleShape).background(K.OkBg),
                                 contentAlignment = Alignment.Center,
-                            ) { Text("👍", fontSize = 36.sp) }
-                            Text("¡Listo! Te avisamos", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = K.Ink)
+                            ) { KIcon("👍", size = 42.dp, tint = K.SelvaText) }
+                            Text("¡Listo! Te avisamos", fontFamily = KFont.Title, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = K.Ink)
                             Text(
                                 "Cuando tengas todo, te avisamos por KuskaAlert para el siguiente paso.",
                                 fontSize = 15.sp, color = K.Label, textAlign = TextAlign.Center, lineHeight = 22.sp,

@@ -62,16 +62,21 @@ import pe.kuskago.app.ui.components.buildDocHtml
 import pe.kuskago.app.ui.components.openUrl
 import pe.kuskago.app.ui.components.printHtml
 import pe.kuskago.app.ui.components.rememberSpeaker
+import pe.kuskago.app.ui.components.ScanDniCard
+import pe.kuskago.app.ui.components.UseMyLocationButton
 import pe.kuskago.app.ui.components.shareText
 import pe.kuskago.app.ui.theme.K
+import pe.kuskago.app.ui.theme.KFont
+import pe.kuskago.app.ui.components.IconLabel
+import pe.kuskago.app.ui.components.KIcon
 import java.text.Normalizer
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private val WarnBg = Color(0xFFFDF0DE)
-private val WarnText = Color(0xFFB4530A)
-private val WarnIcon = Color(0xFFD97706)
+private val WarnBg = K.WarnBg
+private val WarnText = K.WarnText
+private val WarnIcon = K.WarnText
 
 private fun todayLabel(): String =
     SimpleDateFormat("dd 'de' MMMM 'de' yyyy", Locale.forLanguageTag("es-PE")).format(Date())
@@ -147,7 +152,7 @@ fun TramiteDetailScreen(
                             background = K.SkyBg, borderColor = K.SkyBorder,
                         ) {
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Text("🚌")
+                                KIcon("🚌", size = 24.dp, tint = K.SkyText)
                                 Text(
                                     "No viajes todavía. Aún te faltan 2 requisitos. Puedes completarlos sin desplazarte.",
                                     fontSize = 12.5.sp, color = K.SkyText, fontWeight = FontWeight.Bold,
@@ -192,8 +197,8 @@ fun TramiteDetailScreen(
                                 "Organismo de Formalización de la Propiedad Informal",
                                 fontSize = 13.sp, color = K.Muted, modifier = Modifier.padding(top = 4.dp, bottom = 10.dp),
                             )
-                            Text("📍 Jr. Los Álamos 123, tu distrito", fontSize = 13.sp, color = K.Label)
-                            Text("📞 (01) 615-6969", fontSize = 13.sp, color = K.Label)
+                            IconLabel("📍 Jr. Los Álamos 123, tu distrito", fontSize = 13.sp, color = K.Label)
+                            IconLabel("📞 (01) 615-6969", fontSize = 13.sp, color = K.Label)
                         }
                         SecondaryButton("Ir al sitio oficial", { context.openUrl("https://www.gob.pe/cofopri") })
                     }
@@ -206,7 +211,7 @@ fun TramiteDetailScreen(
 @Composable
 private fun CheckLine(ok: Boolean, text: String) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(if (ok) "✓" else "⚠", color = if (ok) K.Green else WarnIcon, fontWeight = FontWeight.ExtraBold)
+        KIcon(if (ok) "✓" else "⚠", size = 20.dp, tint = if (ok) K.SelvaText else WarnIcon)
         Text(text, fontSize = 13.sp, color = K.Ink)
     }
 }
@@ -271,9 +276,10 @@ fun TemplatesScreen(
     val context = LocalContext.current
     var step by rememberSaveable { mutableStateOf("list") }
     var selected by rememberSaveable { mutableIntStateOf(0) }
-    var name by rememberSaveable { mutableStateOf(store.getProfile().name) }
-    var address by rememberSaveable { mutableStateOf("") }
-    var time by rememberSaveable { mutableStateOf("") }
+    val known = remember { store.getPersonalData() }
+    var name by rememberSaveable { mutableStateOf(known["nombre"] ?: store.getProfile().name) }
+    var address by rememberSaveable { mutableStateOf(known["predio_direccion"] ?: known["predio_ubicacion"] ?: "") }
+    var time by rememberSaveable { mutableStateOf(known["posesion_tiempo"] ?: "") }
     var showErrors by remember { mutableStateOf(false) }
 
     val order = listOf("list", "fill", "preview", "saved")
@@ -288,6 +294,7 @@ fun TemplatesScreen(
     fun html() = buildDocHtml(tpl.title, todayLabel(), bodyText, emptyList())
     fun saveDoc() {
         store.addDoc(StoredDoc(tpl.title + ".pdf", "Plantilla · ${shortDate()}", "📝", content = bodyText))
+        store.savePersonalData(mapOf("nombre" to name, "predio_direccion" to address, "posesion_tiempo" to time))
     }
 
     Screen {
@@ -325,7 +332,7 @@ fun TemplatesScreen(
                                 tpl.title.uppercase(), fontWeight = FontWeight.ExtraBold, fontSize = 13.5.sp, color = K.Ink,
                                 textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
                             )
-                            Text(bodyText, fontSize = 12.5.sp, lineHeight = 21.sp, color = Color(0xFF33362F))
+                            Text(bodyText, fontSize = 12.5.sp, lineHeight = 21.sp, color = K.Ink)
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(bottom = 12.dp)) {
                             SecondaryButton("Editar", { step = "fill" }, Modifier.weight(1f), minHeight = 42.dp, fontSize = 14.sp)
@@ -349,7 +356,7 @@ fun TemplatesScreen(
                             verticalArrangement = Arrangement.spacedBy(14.dp),
                         ) {
                             SuccessCheck(76.dp)
-                            Text("Documento guardado", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = K.Ink)
+                            Text("Documento guardado", fontFamily = KFont.Title, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = K.Ink)
                             Text("Lo encontrarás en Mis documentos.", fontSize = 13.5.sp, color = K.Muted)
                         }
                         PrimaryButton("Volver al trámite", { go(Route.TramiteDetail) })
@@ -372,6 +379,13 @@ private data class Q(
     val placeholder: String = "",
     val options: List<String>? = null,
     val numeric: Boolean = false,
+    /** Clave del dato del usuario que responde esta pregunta (null = depende de cada trámite). */
+    val key: String? = null,
+)
+
+/** Preguntas que se pueden completar con la ubicación del teléfono. */
+private val LOCATION_KEYS = setOf(
+    "domicilio", "distrito", "predio_ubicacion", "predio_direccion", "predio_distrito", "negocio_direccion",
 )
 
 private data class WizardDef(
@@ -387,11 +401,11 @@ private val WIZARDS: Map<String, WizardDef> = mapOf(
         "Registro de terreno", "COFOPRI", "Declaración Jurada de Posesión de Terreno",
         "El (la) solicitante declara bajo juramento poseer el terreno descrito a continuación, para efectos de su registro ante COFOPRI.",
         listOf(
-            Q("nombre", "Nombre completo", "¿Cuál es tu nombre completo?", "Ej. Juan Quispe Mamani"),
-            Q("dni", "DNI", "¿Cuál es tu número de DNI?", "8 dígitos", numeric = true),
-            Q("ubicacion", "Ubicación del terreno", "¿Dónde está ubicado el terreno?", "Distrito, provincia, departamento"),
-            Q("area", "Área aproximada", "¿Cuál es el área aproximada del terreno?", "Ej. 500 m²"),
-            Q("tiempo", "Tiempo de posesión", "¿Hace cuántos años posees el terreno?", "Ej. 8 años"),
+            Q("nombre", "Nombre completo", "¿Cuál es tu nombre completo?", "Ej. Juan Quispe Mamani", key = "nombre"),
+            Q("dni", "DNI", "¿Cuál es tu número de DNI?", "8 dígitos", numeric = true, key = "dni"),
+            Q("ubicacion", "Ubicación del terreno", "¿Dónde está ubicado el terreno?", "Distrito, provincia, departamento", key = "predio_ubicacion"),
+            Q("area", "Área aproximada", "¿Cuál es el área aproximada del terreno?", "Ej. 500 m²", key = "predio_area"),
+            Q("tiempo", "Tiempo de posesión", "¿Hace cuántos años posees el terreno?", "Ej. 8 años", key = "posesion_tiempo"),
             Q("construccion", "¿Tiene construcción?", "¿El terreno tiene alguna construcción?", options = listOf("Sí", "No")),
         ),
     ),
@@ -399,31 +413,31 @@ private val WIZARDS: Map<String, WizardDef> = mapOf(
         "Constancia de posesión", "Municipalidad", "Solicitud de Constancia de Posesión",
         "El (la) solicitante pide a la municipalidad la emisión de una constancia de posesión sobre el predio descrito a continuación.",
         listOf(
-            Q("nombre", "Nombre completo", "¿Cuál es tu nombre completo?", "Ej. Juan Quispe Mamani"),
-            Q("dni", "DNI", "¿Cuál es tu número de DNI?", "8 dígitos", numeric = true),
-            Q("direccion", "Dirección del predio", "¿Cuál es la dirección del predio?", "Jr./Av., número, referencia"),
-            Q("distrito", "Distrito", "¿En qué distrito se encuentra?", "Ej. tu distrito"),
-            Q("tiempo", "Tiempo de posesión", "¿Hace cuánto tiempo vives u ocupas el predio?", "Ej. 5 años"),
+            Q("nombre", "Nombre completo", "¿Cuál es tu nombre completo?", "Ej. Juan Quispe Mamani", key = "nombre"),
+            Q("dni", "DNI", "¿Cuál es tu número de DNI?", "8 dígitos", numeric = true, key = "dni"),
+            Q("direccion", "Dirección del predio", "¿Cuál es la dirección del predio?", "Jr./Av., número, referencia", key = "predio_direccion"),
+            Q("distrito", "Distrito", "¿En qué distrito se encuentra?", "Ej. tu distrito", key = "predio_distrito"),
+            Q("tiempo", "Tiempo de posesión", "¿Hace cuánto tiempo vives u ocupas el predio?", "Ej. 5 años", key = "posesion_tiempo"),
         ),
     ),
     "dni" to WizardDef(
         "DNI — Duplicado", "RENIEC", "Solicitud de Duplicado de DNI",
         "El (la) solicitante pide a RENIEC la emisión de un duplicado de su Documento Nacional de Identidad por el motivo señalado.",
         listOf(
-            Q("nombre", "Nombre completo", "¿Cuál es tu nombre completo?", "Ej. Juan Quispe Mamani"),
-            Q("dniAnterior", "DNI anterior", "¿Recuerdas tu número de DNI anterior?", "8 dígitos (si lo recuerdas)", numeric = true),
+            Q("nombre", "Nombre completo", "¿Cuál es tu nombre completo?", "Ej. Juan Quispe Mamani", key = "nombre"),
+            Q("dniAnterior", "DNI anterior", "¿Recuerdas tu número de DNI anterior?", "8 dígitos (si lo recuerdas)", numeric = true, key = "dni"),
             Q("motivo", "Motivo del duplicado", "¿Cuál es el motivo del duplicado?", options = listOf("Pérdida", "Robo", "Deterioro")),
-            Q("direccion", "Dirección actual", "¿Cuál es tu dirección actual?", "Jr./Av., número, distrito"),
+            Q("direccion", "Dirección actual", "¿Cuál es tu dirección actual?", "Jr./Av., número, distrito", key = "domicilio"),
         ),
     ),
     "pension65" to WizardDef(
         "Pensión 65", "MIDIS", "Ficha de Inscripción — Pensión 65",
         "El (la) solicitante pide su inscripción al programa Pensión 65 con los datos declarados a continuación.",
         listOf(
-            Q("nombre", "Nombre completo", "¿Cuál es tu nombre completo?", "Ej. Juan Quispe Mamani"),
-            Q("dni", "DNI", "¿Cuál es tu número de DNI?", "8 dígitos", numeric = true),
-            Q("edad", "Edad", "¿Cuál es tu edad?", "Ej. 68", numeric = true),
-            Q("distrito", "Distrito de residencia", "¿En qué distrito resides?", "Ej. tu distrito"),
+            Q("nombre", "Nombre completo", "¿Cuál es tu nombre completo?", "Ej. Juan Quispe Mamani", key = "nombre"),
+            Q("dni", "DNI", "¿Cuál es tu número de DNI?", "8 dígitos", numeric = true, key = "dni"),
+            Q("edad", "Edad", "¿Cuál es tu edad?", "Ej. 68", numeric = true, key = "edad"),
+            Q("distrito", "Distrito de residencia", "¿En qué distrito resides?", "Ej. tu distrito", key = "distrito"),
             Q("otraPension", "¿Recibe otra pensión?", "¿Recibes actualmente otra pensión?", options = listOf("Sí", "No")),
         ),
     ),
@@ -433,8 +447,8 @@ private val WIZARDS: Map<String, WizardDef> = mapOf(
         listOf(
             Q("fallecido", "Persona fallecida", "¿Cuál es el nombre completo de la persona fallecida?", "Nombre completo"),
             Q("fecha", "Fecha de fallecimiento", "¿Cuál fue la fecha de fallecimiento?", "DD/MM/AAAA"),
-            Q("nombre", "Tu nombre completo", "¿Cuál es tu nombre completo?", "Ej. Juan Quispe Mamani"),
-            Q("dni", "Tu DNI", "¿Cuál es tu número de DNI?", "8 dígitos", numeric = true),
+            Q("nombre", "Tu nombre completo", "¿Cuál es tu nombre completo?", "Ej. Juan Quispe Mamani", key = "nombre"),
+            Q("dni", "Tu DNI", "¿Cuál es tu número de DNI?", "8 dígitos", numeric = true, key = "dni"),
             Q("relacion", "Relación con el fallecido", "¿Cuál es tu relación con la persona fallecida?", options = listOf("Hijo/a", "Cónyuge", "Padre/Madre", "Hermano/a", "Otro")),
             Q("herederos", "N° de herederos", "¿Cuántos herederos hay en total?", "Ej. 3", numeric = true),
         ),
@@ -443,11 +457,11 @@ private val WIZARDS: Map<String, WizardDef> = mapOf(
         "Licencia de funcionamiento", "Municipalidad", "Solicitud de Licencia de Funcionamiento",
         "El (la) solicitante pide a la municipalidad el otorgamiento de una licencia de funcionamiento para el negocio descrito a continuación.",
         listOf(
-            Q("negocio", "Nombre del negocio", "¿Cuál es el nombre de tu negocio?", "Nombre comercial"),
-            Q("nombre", "Nombre del propietario", "¿Cuál es tu nombre completo como propietario(a)?", "Ej. Juan Quispe Mamani"),
-            Q("dni", "DNI del propietario", "¿Cuál es tu número de DNI?", "8 dígitos", numeric = true),
-            Q("direccion", "Dirección del local", "¿Cuál es la dirección del local?", "Jr./Av., número, distrito"),
-            Q("giro", "Giro del negocio", "¿Cuál es el giro o actividad del negocio?", "Ej. bodega, restaurante, taller"),
+            Q("negocio", "Nombre del negocio", "¿Cuál es el nombre de tu negocio?", "Nombre comercial", key = "negocio_nombre"),
+            Q("nombre", "Nombre del propietario", "¿Cuál es tu nombre completo como propietario(a)?", "Ej. Juan Quispe Mamani", key = "nombre"),
+            Q("dni", "DNI del propietario", "¿Cuál es tu número de DNI?", "8 dígitos", numeric = true, key = "dni"),
+            Q("direccion", "Dirección del local", "¿Cuál es la dirección del local?", "Jr./Av., número, distrito", key = "negocio_direccion"),
+            Q("giro", "Giro del negocio", "¿Cuál es el giro o actividad del negocio?", "Ej. bodega, restaurante, taller", key = "negocio_giro"),
         ),
     ),
 )
@@ -461,94 +475,202 @@ fun TramiteWizardScreen(
 ) {
     val context = LocalContext.current
     val def = WIZARDS[type] ?: WIZARDS.getValue("terreno")
-    var step by rememberSaveable(type) { mutableIntStateOf(0) }
-    val answers = remember(type) { mutableStateListOf(*Array(def.questions.size) { "" }) }
     val total = def.questions.size
-    val isDone = step >= total
-    var saved by rememberSaveable(type) { mutableStateOf(false) }
 
-    BackHandler(enabled = step in 1 until total) { step-- }
+    // 1) Lo que ya sabemos del usuario (cuenta + trámites anteriores) rellena el formulario.
+    val known = remember(type) { store.getPersonalData() }
+    val answers = remember(type) {
+        mutableStateListOf(*Array(total) { i -> def.questions[i].key?.let { known[it] }.orEmpty() })
+    }
+    val knownIdx = remember(type) { (0 until total).filter { answers[it].isNotBlank() } }
+    val missingIdx = remember(type) { (0 until total).filter { it !in knownIdx } }
+
+    // 2) Fases: "review" (confirmar lo conocido) → "ask" (solo lo que falta) → "done"
+    var phase by rememberSaveable(type) { mutableStateOf(if (knownIdx.isEmpty()) "ask" else "review") }
+    var askAll by rememberSaveable(type) { mutableStateOf(false) }   // true = el usuario quiere revisar todo
+    var step by rememberSaveable(type) { mutableIntStateOf(0) }
+    var saved by rememberSaveable(type) { mutableStateOf(false) }
+    var newlySaved by rememberSaveable(type) { mutableIntStateOf(0) }
+
+    val askList = if (askAll) (0 until total).toList() else missingIdx
+    val isDone = phase == "done"
+
+    fun back() {
+        when {
+            phase == "ask" && step > 0 -> step--
+            phase == "ask" && knownIdx.isNotEmpty() -> { phase = "review"; step = 0 }
+            else -> onExit()
+        }
+    }
+    BackHandler(enabled = phase == "ask" && (step > 0 || knownIdx.isNotEmpty())) { back() }
 
     val lines = def.questions.mapIndexed { i, q -> q.label to answers[i].ifBlank { "—" } }
     val today = todayLabel()
 
+    // 3) Al terminar: guardamos el documento y recordamos los datos para la próxima vez.
     LaunchedEffect(isDone) {
         if (isDone && !saved) {
             val text = def.docIntro + "\n\n" + lines.joinToString("\n") { "${it.first}: ${it.second}" }
             store.addDoc(StoredDoc(def.docTitle + ".pdf", "${def.entity} · ${shortDate()}", "🧾", content = text))
+            store.addTramite(type, def.title, def.entity, def.docTitle + ".pdf")
+            val toRemember = def.questions.mapIndexedNotNull { i, q ->
+                q.key?.takeIf { it != "dni" }?.let { k -> k to answers[i] }
+            }.toMap()
+            newlySaved = toRemember.count { (k, v) -> v.isNotBlank() && known[k] != v.trim() }
+            store.savePersonalData(toRemember)
             saved = true
         }
     }
 
     Screen {
         TopBar(
-            onBack = { if (step in 1 until total) step-- else onExit() },
+            onBack = ::back,
             title = if (isDone) "Documento listo" else def.title,
         )
         Box(Modifier.weight(1f)) {
             ScrollBody {
-                if (!isDone) {
-                    val q = def.questions[step]
-                    val value = answers[step]
-                    Box(Modifier.padding(bottom = 14.dp)) { Chip(def.entity, K.SkyBg, K.SkyText) }
-                    KProgress(step.toFloat() / total, Modifier.padding(bottom = 8.dp))
-                    Text(
-                        "Pregunta ${step + 1} de $total", fontSize = 12.sp, color = K.Muted2, fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 22.dp),
-                    )
-                    Text(q.text, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = K.Ink, lineHeight = 25.sp, modifier = Modifier.padding(bottom = 18.dp))
-                    if (q.options != null) {
-                        OptionsFlow(q.options, value) { answers[step] = it }
-                    } else {
-                        KTextField(
-                            value = value,
-                            onValueChange = { answers[step] = if (q.numeric) it.filter { c -> c.isDigit() }.take(8) else it },
-                            placeholder = q.placeholder,
-                            keyboardType = if (q.numeric) KeyboardType.Number else KeyboardType.Text,
+                when (phase) {
+                    "review" -> {
+                        Box(Modifier.padding(bottom = 14.dp)) { Chip(def.entity, K.SkyBg, K.SkyText) }
+                        Text(
+                            "Ya tenemos estos datos tuyos",
+                            fontFamily = KFont.Title, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = K.Ink, modifier = Modifier.padding(bottom = 6.dp),
+                        )
+                        Text(
+                            if (missingIdx.isEmpty()) "No necesitas escribir nada más. Revisa que estén bien."
+                            else "Solo te preguntaremos ${missingIdx.size} ${if (missingIdx.size == 1) "dato que falta" else "datos que faltan"}.",
+                            fontSize = 13.5.sp, color = K.Muted, modifier = Modifier.padding(bottom = 14.dp),
+                        )
+                        KCard(Modifier.fillMaxWidth().padding(bottom = 18.dp), background = K.GreenSoft, borderColor = K.GreenSoftBorder) {
+                            knownIdx.forEach { i ->
+                                Row(Modifier.fillMaxWidth().padding(vertical = 7.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    KIcon("✓", size = 20.dp, tint = K.SelvaText)
+                                    Text(def.questions[i].label, fontSize = 13.sp, color = K.Muted, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                                    Text(answers[i], fontSize = 13.sp, color = K.Ink, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
+                        PrimaryButton(
+                            if (missingIdx.isEmpty()) "✓ Sí, generar documento" else "✓ Sí, usar mis datos",
+                            {
+                                askAll = false; step = 0
+                                phase = if (missingIdx.isEmpty()) "done" else "ask"
+                            },
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        SecondaryButton("Cambiar algún dato", { askAll = true; step = 0; phase = "ask" })
+                    }
+
+                    "ask" -> {
+                        val qi = askList[step.coerceIn(0, askList.lastIndex)]
+                        val q = def.questions[qi]
+                        val value = answers[qi]
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 14.dp)) {
+                            Chip(def.entity, K.SkyBg, K.SkyText)
+                            if (!askAll && knownIdx.isNotEmpty()) Chip("✓ ${knownIdx.size} datos ya completados", K.OkBg, K.GreenDark)
+                        }
+                        KProgress(step.toFloat() / askList.size, Modifier.padding(bottom = 8.dp))
+                        Text(
+                            "Pregunta ${step + 1} de ${askList.size}", fontSize = 12.sp, color = K.Muted2, fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(bottom = 22.dp),
                         )
+                        Text(q.text, fontFamily = KFont.Title, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = K.Ink, lineHeight = 25.sp, modifier = Modifier.padding(bottom = 18.dp))
+                        if (q.options != null) {
+                            OptionsFlow(q.options, value) { answers[qi] = it }
+                        } else {
+                            KTextField(
+                                value = value,
+                                onValueChange = { answers[qi] = if (q.numeric) it.filter { c -> c.isDigit() }.take(8) else it },
+                                placeholder = q.placeholder,
+                                keyboardType = if (q.numeric) KeyboardType.Number else KeyboardType.Text,
+                                enabled = q.key != "dni" || value.isBlank(),   // el DNI de tu cuenta no se cambia aquí
+                                modifier = Modifier.padding(bottom = 22.dp),
+                            )
+                        }
+                        val lk = q.key
+                        if (lk != null && lk in LOCATION_KEYS) {
+                            UseMyLocationButton(
+                                label = if (lk.endsWith("distrito")) "📍 Usar el distrito donde estoy" else "📍 Usar mi ubicación actual",
+                                onResult = { g ->
+                                    answers[qi] = when {
+                                        lk.endsWith("distrito") -> g.district ?: g.full
+                                        lk == "predio_ubicacion" -> g.full
+                                        else -> listOfNotNull(g.address, g.district).joinToString(", ").ifBlank { g.full }
+                                    }
+                                },
+                                modifier = Modifier.padding(bottom = 12.dp),
+                            )
+                        }
+                        if (q.key == "domicilio") {
+                            ScanDniCard(
+                                onResult = { d -> listOfNotNull(d.address, d.district).joinToString(", ").takeIf { it.isNotBlank() }?.let { answers[qi] = it } },
+                                modifier = Modifier.padding(bottom = 12.dp),
+                            )
+                        }
+                        if (q.key != null) {
+                            IconLabel(
+                                "💾 Lo recordaremos para tus próximos trámites.",
+                                fontSize = 11.5.sp, color = K.Muted2, modifier = Modifier.padding(top = 0.dp, bottom = 12.dp),
+                            )
+                        }
+                        PrimaryButton(
+                            if (step >= askList.size - 1) "Generar documento" else "Siguiente",
+                            {
+                                if (value.isNotBlank()) {
+                                    if (step >= askList.size - 1) phase = "done" else step++
+                                }
+                            },
+                            containerColor = if (value.isNotBlank()) K.Green else K.Green.copy(alpha = 0.45f),
+                        )
                     }
-                    PrimaryButton(
-                        if (step == total - 1) "Generar documento" else "Siguiente",
-                        { if (value.isNotBlank()) step++ },
-                        containerColor = if (value.isNotBlank()) K.Green else K.Green.copy(alpha = 0.45f),
-                    )
-                } else {
-                    Box(Modifier.padding(bottom = 14.dp)) { Chip("✓ Documento generado", K.OkBg, K.GreenDark) }
-                    KCard(
-                        Modifier.fillMaxWidth().padding(bottom = 18.dp),
-                        contentPadding = PaddingValues(horizontal = 22.dp, vertical = 26.dp),
-                    ) {
-                        Text(
-                            def.docTitle.uppercase(), fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = K.Ink,
-                            textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(),
-                        )
-                        Text(
-                            "${def.entity} · $today", fontSize = 12.sp, color = K.Muted, textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 18.dp),
-                        )
-                        Text(def.docIntro, fontSize = 13.sp, lineHeight = 22.sp, color = K.Ink, modifier = Modifier.padding(bottom = 18.dp))
-                        lines.forEach { (label, v) ->
-                            Row(Modifier.fillMaxWidth().padding(vertical = 9.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Text(label, fontSize = 12.5.sp, color = K.Muted, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                                Text(v, fontSize = 12.5.sp, fontWeight = FontWeight.ExtraBold, color = K.Ink, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+
+                    else -> {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 14.dp)) {
+                            Chip("✓ Documento generado", K.OkBg, K.GreenDark)
+                        }
+                        if (newlySaved > 0) {
+                            KCard(Modifier.fillMaxWidth().padding(bottom = 14.dp), background = K.GreenSoft, borderColor = K.GreenSoftBorder) {
+                                IconLabel(
+                                    "💾 Guardamos $newlySaved ${if (newlySaved == 1) "dato" else "datos"} para que no los vuelvas a escribir. Puedes verlos o borrarlos en Perfil → Editar datos.",
+                                    fontSize = 12.5.sp, color = K.GreenDark, fontWeight = FontWeight.Bold,
+                                )
                             }
-                            HorizontalDivider(color = K.Border)
                         }
-                        Column(Modifier.fillMaxWidth().padding(top = 34.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            HorizontalDivider(color = K.Ink, thickness = 1.5.dp, modifier = Modifier.width(180.dp))
-                            Text("Firma del solicitante", fontSize = 11.5.sp, color = K.Muted, modifier = Modifier.padding(top = 6.dp))
+                        KCard(
+                            Modifier.fillMaxWidth().padding(bottom = 18.dp),
+                            contentPadding = PaddingValues(horizontal = 22.dp, vertical = 26.dp),
+                        ) {
+                            Text(
+                                def.docTitle.uppercase(), fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = K.Ink,
+                                textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(),
+                            )
+                            Text(
+                                "${def.entity} · $today", fontSize = 12.sp, color = K.Muted, textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 18.dp),
+                            )
+                            Text(def.docIntro, fontSize = 13.sp, lineHeight = 22.sp, color = K.Ink, modifier = Modifier.padding(bottom = 18.dp))
+                            lines.forEach { (label, v) ->
+                                Row(Modifier.fillMaxWidth().padding(vertical = 9.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Text(label, fontSize = 12.5.sp, color = K.Muted, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                                    Text(v, fontSize = 12.5.sp, fontWeight = FontWeight.ExtraBold, color = K.Ink, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                                }
+                                HorizontalDivider(color = K.Border)
+                            }
+                            Column(Modifier.fillMaxWidth().padding(top = 34.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                HorizontalDivider(color = K.Ink, thickness = 1.5.dp, modifier = Modifier.width(180.dp))
+                                Text("Firma del solicitante", fontSize = 11.5.sp, color = K.Muted, modifier = Modifier.padding(top = 6.dp))
+                            }
                         }
+                        PrimaryButton("🖨️ Imprimir / Guardar como PDF", {
+                            context.printHtml(def.docTitle, buildDocHtml(def.docTitle, "${def.entity} · $today", def.docIntro, lines))
+                        })
+                        Spacer(Modifier.height(12.dp))
+                        SecondaryButton("Ver en Mis trámites", { go(Route.MyTramites) })
+                        Text(
+                            "También lo guardamos en Mis documentos y en Mis trámites, para que sigas su avance.", fontSize = 12.sp, color = K.Muted2,
+                            textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                        )
                     }
-                    PrimaryButton("🖨️ Imprimir / Guardar como PDF", {
-                        context.printHtml(def.docTitle, buildDocHtml(def.docTitle, "${def.entity} · $today", def.docIntro, lines))
-                    })
-                    Spacer(Modifier.height(12.dp))
-                    SecondaryButton("Volver a trámites", { go(Route.Search) })
-                    Text(
-                        "También lo guardamos en Mis documentos.", fontSize = 12.sp, color = K.Muted2,
-                        textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-                    )
                 }
             }
         }

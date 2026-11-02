@@ -15,7 +15,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import pe.kuskago.app.data.KuskaStore
 import pe.kuskago.app.ui.screens.AccessibilityScreen
 import pe.kuskago.app.ui.screens.AlertsScreen
@@ -24,6 +27,7 @@ import pe.kuskago.app.ui.screens.DocumentsScreen
 import pe.kuskago.app.ui.screens.EditProfileScreen
 import pe.kuskago.app.ui.screens.FamilyScreen
 import pe.kuskago.app.ui.screens.HelpScreen
+import pe.kuskago.app.ui.screens.MyTramitesScreen
 import pe.kuskago.app.ui.screens.RequisitoDetailScreen
 import pe.kuskago.app.ui.screens.SimpleFlowScreen
 import pe.kuskago.app.ui.screens.TemplatesScreen
@@ -40,6 +44,7 @@ import pe.kuskago.app.ui.screens.SearchScreen
 import pe.kuskago.app.ui.screens.SignUpScreen
 import pe.kuskago.app.ui.screens.WelcomeScreen
 import pe.kuskago.app.ui.theme.KuskaTheme
+import pe.kuskago.app.ui.theme.textScale
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,6 +63,7 @@ enum class Route {
     Home, HomeSimple, Search, Profile, Accessibility,
     TramiteDetail, RequisitoDetail, Templates, Translator, TramiteWizard,
     Documents, Family, Help, CitizenRoute, Alerts, EditProfile, SimpleFlow,
+    MyTramites,
 }
 
 /** Pila de navegación simple: ir a una pantalla que ya está en la pila vuelve a ella. */
@@ -101,7 +107,20 @@ class Navigator(initial: List<Route>) {
 fun KuskaGoApp() {
     val context = LocalContext.current
     val store = remember { KuskaStore(context) }
-    val nav = rememberSaveable(saver = Navigator.saver) { Navigator(listOf(Route.Welcome)) }
+    val nav = rememberSaveable(saver = Navigator.saver) {
+        // Si el usuario marcó "Recordarme" y su sesión sigue abierta, entra directo al inicio.
+        val user = store.currentUser()
+        when {
+            user != null && store.rememberSession() -> {
+                val guided = store.getPrefs(user.dni)?.guided == true
+                Navigator(listOf(if (guided) Route.HomeSimple else Route.Home))
+            }
+            else -> {
+                if (user != null) store.setCurrentUser(null)   // sesión sin "Recordarme": se cierra
+                Navigator(listOf(Route.Welcome))
+            }
+        }
+    }
     var wizardType by rememberSaveable { mutableStateOf("terreno") }
     var detailTab by rememberSaveable { mutableStateOf("resumen") }
     var profileUpdated by rememberSaveable { mutableStateOf(false) }
@@ -119,7 +138,18 @@ fun KuskaGoApp() {
 
     BackHandler(enabled = nav.canGoBack) { nav.back() }
 
+    // "Texto grande" de las preferencias se aplica a TODA la app (se vuelve a leer al cambiar de pantalla).
+    val appTextScale = remember(nav.current) {
+        store.currentUser()?.dni?.let { store.getPrefs(it) }.textScale()
+    }
+    val baseDensity = LocalDensity.current
+
     Crossfade(targetState = nav.current, label = "pantalla") { route ->
+        // Preferencias y Accesibilidad ya muestran su propia vista previa del tamaño.
+        val scale = if (route == Route.Preferences || route == Route.Accessibility) 1f else appTextScale
+        CompositionLocalProvider(
+            LocalDensity provides Density(baseDensity.density, baseDensity.fontScale * scale),
+        ) {
         when (route) {
             Route.Welcome -> WelcomeScreen(
                 onStart = { nav.go(Route.Login) },
@@ -201,6 +231,13 @@ fun KuskaGoApp() {
 
             Route.Help -> HelpScreen(onExit = { nav.back() }, go = go)
 
+            Route.MyTramites -> MyTramitesScreen(
+                store = store,
+                onBack = { nav.back() },
+                go = go,
+                onOpenWizard = openWizard,
+            )
+
             Route.CitizenRoute -> CitizenRouteScreen(
                 store = store,
                 onExit = { nav.back() },
@@ -208,7 +245,7 @@ fun KuskaGoApp() {
                 onEntity = openEntity,
             )
 
-            Route.Alerts -> AlertsScreen(onExit = { nav.back() }, go = go)
+            Route.Alerts -> AlertsScreen(store = store, onExit = { nav.back() }, go = go)
 
             Route.SimpleFlow -> SimpleFlowScreen(onExit = { nav.back() }, go = go)
 
@@ -218,6 +255,7 @@ fun KuskaGoApp() {
                 onBack = { nav.back() },
                 go = go,
                 onLogout = {
+                    store.setRememberSession(false)
                     store.setCurrentUser(null)
                     nav.reset(Route.Welcome, Route.Login)
                 },
@@ -237,6 +275,7 @@ fun KuskaGoApp() {
                 store = store,
                 onBack = { nav.go(Route.Profile) },
             )
+        }
         }
     }
 }

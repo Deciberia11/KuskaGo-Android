@@ -52,9 +52,11 @@ import pe.kuskago.app.ui.components.SectionLabel
 import pe.kuskago.app.ui.components.TopBar
 import pe.kuskago.app.ui.components.rememberSpeaker
 import pe.kuskago.app.ui.theme.K
+import pe.kuskago.app.ui.components.IconLabel
+import pe.kuskago.app.ui.components.KIcon
 
-private val AiBg = Color(0xFFF1E7F9)
-private val AiBorder = Color(0xFFDCC3F0)
+private val AiBg = K.OkBg
+private val AiBorder = K.OkBorder
 
 // =============================================================
 // 9b. TRADUCTOR DE BUROCRACIA (algoritmo sin internet + IA opcional)
@@ -163,9 +165,9 @@ fun TranslatorScreen(onBack: () -> Unit) {
                     PrimaryButton(
                         if (aiLoading) "Explicando…" else "✨ Explicar con IA",
                         { if (docText.isNotBlank() && !aiLoading) runAi() },
-                        containerColor = Color(0xFF7C3AAF),
+                        containerColor = K.SelvaText,
                     )
-                    Text(
+                    IconLabel(
                         if (ai.provider == AiClient.Provider.OLLAMA)
                             "🔒 Con Ollama el texto se procesa en tu propia computadora. Igual ocultamos DNI, celular y correo."
                         else
@@ -174,13 +176,13 @@ fun TranslatorScreen(onBack: () -> Unit) {
                     )
                     if (aiLoading) {
                         Row(Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalArrangement = Arrangement.Center) {
-                            CircularProgressIndicator(color = Color(0xFF7C3AAF), modifier = Modifier.size(32.dp))
+                            CircularProgressIndicator(color = K.SelvaText, modifier = Modifier.size(32.dp))
                         }
                     }
                     aiError?.let { ErrorCard("No se pudo explicar", it, Modifier.padding(bottom = 14.dp)) }
                     aiText?.let { t ->
                         KCard(Modifier.fillMaxWidth().padding(bottom = 12.dp), background = AiBg, borderColor = AiBorder) {
-                            Text("✨ EXPLICACIÓN CON IA", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF7C3AAF), modifier = Modifier.padding(bottom = 8.dp))
+                            IconLabel("✨ EXPLICACIÓN CON IA", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = K.SelvaText, modifier = Modifier.padding(bottom = 8.dp))
                             Text(t, fontSize = 14.sp, color = K.Ink, lineHeight = 21.sp)
                         }
                         SecondaryButton("🔊 Escuchar explicación", { speak(t) })
@@ -217,7 +219,7 @@ private fun LocalResult(r: BureaucracyTranslator.Result, speak: (String) -> Unit
     if (r.isEmpty) {
         KCard(Modifier.fillMaxWidth().padding(bottom = 16.dp), background = K.OrangeBg, borderColor = K.OrangeBorder) {
             Text("No reconocimos términos difíciles conocidos", fontWeight = FontWeight.ExtraBold, fontSize = 13.5.sp, color = K.MustardText)
-            Text("Prueba la pestaña \"✨ Con IA\" o pide ayuda a un asesor.", fontSize = 12.5.sp, color = K.Muted, modifier = Modifier.padding(top = 4.dp))
+            Text("Prueba la pestaña \"Con IA\" o pide ayuda a un asesor.", fontSize = 12.5.sp, color = K.Muted, modifier = Modifier.padding(top = 4.dp))
         }
         return
     }
@@ -230,15 +232,15 @@ private fun LocalResult(r: BureaucracyTranslator.Result, speak: (String) -> Unit
     if (r.actions.isNotEmpty() || r.deadlines.isNotEmpty() || r.documents.isNotEmpty()) {
         KCard(Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
             if (r.actions.isNotEmpty()) {
-                Text("✅ Lo que tienes que hacer", fontWeight = FontWeight.ExtraBold, fontSize = 13.5.sp, color = K.Ink, modifier = Modifier.padding(bottom = 4.dp))
+                IconLabel("✅ Lo que tienes que hacer", fontWeight = FontWeight.ExtraBold, fontSize = 13.5.sp, color = K.Ink, modifier = Modifier.padding(bottom = 4.dp))
                 r.actions.forEach { Text("•  $it", fontSize = 13.sp, color = K.Ink, lineHeight = 19.sp, modifier = Modifier.padding(bottom = 4.dp)) }
             }
             if (r.deadlines.isNotEmpty()) {
-                Text("⏰ Plazo", fontWeight = FontWeight.ExtraBold, fontSize = 13.5.sp, color = K.Ink, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
+                IconLabel("⏰ Plazo", fontWeight = FontWeight.ExtraBold, fontSize = 13.5.sp, color = K.Ink, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
                 Text(r.deadlines.joinToString(" · "), fontSize = 13.sp, color = K.ErrorTitle, fontWeight = FontWeight.Bold)
             }
             if (r.documents.isNotEmpty()) {
-                Text("📄 Documentos que mencionan", fontWeight = FontWeight.ExtraBold, fontSize = 13.5.sp, color = K.Ink, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
+                IconLabel("📄 Documentos que mencionan", fontWeight = FontWeight.ExtraBold, fontSize = 13.5.sp, color = K.Ink, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
                 Text(r.documents.joinToString(" · "), fontSize = 13.sp, color = K.Ink)
             }
         }
@@ -284,7 +286,7 @@ private fun AiSettingsCard(
     KCard(Modifier.fillMaxWidth().padding(bottom = 14.dp), onClick = if (expanded) null else onToggle) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("⚙️ IA: $providerLabel", fontWeight = FontWeight.ExtraBold, fontSize = 13.5.sp, color = K.Ink)
+                IconLabel("⚙️ IA: $providerLabel", fontWeight = FontWeight.ExtraBold, fontSize = 13.5.sp, color = K.Ink)
                 if (!expanded) Text("Toca para configurar", fontSize = 12.sp, color = K.Muted)
             }
             if (expanded) GhostButtonSmall("Cerrar", onToggle)

@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import pe.kuskago.app.Route
 import pe.kuskago.app.ui.theme.K
+import pe.kuskago.app.ui.theme.KFont
 import java.util.Locale
 
 // =============================================================
@@ -71,8 +72,8 @@ fun ListItemRow(
     title: String,
     subtitle: String? = null,
     subtitleColor: Color = K.Muted,
-    iconBg: Color = K.GreenSoft,
-    iconColor: Color = K.Green,
+    iconBg: Color = K.Menta,
+    iconColor: Color = K.Verde,
     trailing: String? = "›",
     trailingColor: Color = K.Faint,
     onClick: (() -> Unit)? = null,
@@ -93,10 +94,10 @@ fun ListItemRow(
                         .clip(RoundedCornerShape(12.dp))
                         .background(iconBg),
                     contentAlignment = Alignment.Center,
-                ) { Text(icon, fontSize = 18.sp, color = iconColor, fontWeight = FontWeight.ExtraBold) }
+                ) { KIcon(icon, size = 22.dp, tint = iconColor) }
             }
             Column(Modifier.weight(1f)) {
-                Text(title, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = K.Ink)
+                Text(title, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = K.Ink)
                 if (subtitle != null) {
                     Text(subtitle, fontSize = 12.sp, color = subtitleColor, fontWeight = if (subtitleColor != K.Muted) FontWeight.Bold else FontWeight.Normal)
                 }
@@ -124,14 +125,14 @@ fun KProgress(fraction: Float, modifier: Modifier = Modifier) {
             .fillMaxWidth()
             .height(10.dp)
             .clip(RoundedCornerShape(999.dp))
-            .background(Color(0xFFEDEAE0)),
+            .background(K.Track),
     ) {
         Box(
             Modifier
                 .fillMaxHeight()
                 .fillMaxWidth(fraction.coerceIn(0f, 1f))
                 .clip(RoundedCornerShape(999.dp))
-                .background(Color(0xFF4FA684))
+                .background(K.VerdeBrillante)
         )
     }
 }
@@ -159,7 +160,7 @@ fun PillTabs(tabs: List<Pair<String, String>>, selected: String, onSelect: (Stri
                     .padding(horizontal = 15.dp, vertical = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(label, fontSize = 13.5.sp, fontWeight = FontWeight.Bold, color = if (active) K.White else K.Muted)
+                IconLabel(label, fontSize = 13.5.sp, fontWeight = FontWeight.Bold, color = if (active) K.White else K.Muted)
             }
         }
     }
@@ -179,7 +180,7 @@ fun OptionChip(label: String, active: Boolean, onClick: () -> Unit) {
             .padding(horizontal = 14.dp, vertical = 11.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(label, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (active) K.White else K.Label)
+        IconLabel(label, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (active) K.White else K.Label)
     }
 }
 
@@ -187,7 +188,7 @@ fun OptionChip(label: String, active: Boolean, onClick: () -> Unit) {
 @Composable
 fun ChoiceCard(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, fontSize: TextUnit = 15.sp) {
     CheckboxCard(checked = true, onClick = onClick, showBox = false, role = Role.Button, modifier = modifier) {
-        Text(text, fontWeight = FontWeight.Bold, fontSize = fontSize, color = K.Ink, modifier = Modifier.weight(1f))
+        IconLabel(text, fontWeight = FontWeight.Bold, fontSize = fontSize, color = K.Ink, iconColor = K.Green, modifier = Modifier.weight(1f))
     }
 }
 
@@ -195,8 +196,8 @@ fun ChoiceCard(text: String, onClick: () -> Unit, modifier: Modifier = Modifier,
 @Composable
 fun StepDot(mark: String, state: Int, size: Dp = 30.dp) {
     // state: 2 = completo, 1 = actual, 0 = pendiente
-    val bg = when (state) { 2 -> K.Green; 1 -> K.GreenSoft; else -> Color(0xFFF1EFE7) }
-    val fg = when (state) { 2 -> K.White; 1 -> K.Green; else -> K.Muted2 }
+    val bg = when (state) { 2 -> K.Selva; 1 -> K.GreenSoft; else -> K.Track }
+    val fg = when (state) { 2 -> K.White; 1 -> K.Green; else -> K.Muted }
     Box(
         modifier = Modifier
             .size(size)
@@ -204,7 +205,7 @@ fun StepDot(mark: String, state: Int, size: Dp = 30.dp) {
             .background(bg)
             .then(if (state == 1) Modifier.border(2.dp, K.Green, RoundedCornerShape(999.dp)) else Modifier),
         contentAlignment = Alignment.Center,
-    ) { Text(mark, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, color = fg) }
+    ) { if (iconFor(mark) != null) KIcon(mark, size = size * 0.6f, tint = fg) else Text(mark, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, color = fg) }
 }
 
 // =============================================================
@@ -314,7 +315,7 @@ private fun esc(s: String) = s
 fun buildDocHtml(title: String, meta: String, intro: String, lines: List<Pair<String, String>>): String {
     val rows = lines.joinToString("") { "<tr><td>${esc(it.first)}</td><td>${esc(it.second)}</td></tr>" }
     return "<!doctype html><html lang=\"es\"><head><meta charset=\"utf-8\"><title>${esc(title)}</title><style>" +
-        "body{font-family:Georgia,'Times New Roman',serif;color:#1A2E29;max-width:640px;margin:40px auto;padding:0 24px}" +
+        "body{font-family:Georgia,'Times New Roman',serif;color:#2C3E50;max-width:640px;margin:40px auto;padding:0 24px}" +
         "h1{font-size:18px;text-transform:uppercase;letter-spacing:0.4px;text-align:center;margin-bottom:4px}" +
         ".meta{text-align:center;color:#6B6558;font-size:12px;margin-bottom:24px}" +
         "p.intro{font-size:13.5px;line-height:1.7;margin-bottom:24px;white-space:pre-wrap}" +

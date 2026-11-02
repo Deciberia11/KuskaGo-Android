@@ -52,6 +52,9 @@ import pe.kuskago.app.ui.components.SecondaryButton
 import pe.kuskago.app.ui.components.SuccessCheck
 import pe.kuskago.app.ui.components.TopBar
 import pe.kuskago.app.ui.theme.K
+import pe.kuskago.app.ui.theme.KFont
+import pe.kuskago.app.ui.components.IconLabel
+import pe.kuskago.app.ui.components.KIcon
 
 private val DNI_REGEX = Regex("^\\d{8}$")
 private val PHONE_REGEX = Regex("^9\\d{8}$")
@@ -102,6 +105,7 @@ fun WelcomeScreen(onStart: () -> Unit, onHaveAccount: () -> Unit) {
                 )
                 Text(
                     "KuskaGo",
+                    fontFamily = KFont.Title,
                     fontSize = 26.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = K.GreenDark,
@@ -122,6 +126,7 @@ fun WelcomeScreen(onStart: () -> Unit, onHaveAccount: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 26.dp),
+            fontFamily = KFont.Title,
             fontSize = 19.sp,
             fontWeight = FontWeight.ExtraBold,
             color = K.Ink,
@@ -165,11 +170,11 @@ fun LoginScreen(
         if (!DNI_REGEX.matches(d)) { error = LoginError.FORMAT; return }
         if (d == KuskaStore.DEMO_DNI) {
             store.setCurrentUser(CurrentUser(d, KuskaStore.DEMO_NAME))
-            onLoggedIn(); return
+            store.setRememberSession(rememberMe); onLoggedIn(); return
         }
         if (store.checkPassword(d, pass)) {
             store.setCurrentUser(CurrentUser(d, store.getUser(d)?.name.orEmpty()))
-            onLoggedIn(); return
+            store.setRememberSession(rememberMe); onLoggedIn(); return
         }
         error = LoginError.NOT_FOUND
     }
@@ -190,10 +195,11 @@ fun LoginScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Image(painterResource(R.drawable.ic_logo), null, Modifier.size(52.dp))
-                Text("KuskaGo", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = K.GreenDark)
+                Text("KuskaGo", fontFamily = KFont.Title, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = K.GreenDark)
             }
             Text(
                 "Inicia sesión",
+                fontFamily = KFont.Title,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = K.Ink,
@@ -267,7 +273,7 @@ fun LoginScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Text("📝", fontSize = 26.sp)
+                KIcon("📝", size = 34.dp, tint = K.WarnText)
                 Text("¿Primera vez en KuskaGo?", fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, color = K.Ink)
                 Text(
                     "Crea tu cuenta gratis en 1 minuto para guardar tus trámites y documentos.",
@@ -303,6 +309,8 @@ fun SignUpScreen(store: KuskaStore, onBack: () -> Unit, onGoToLogin: () -> Unit)
     var pass by rememberSaveable { mutableStateOf("") }
     var pass2 by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
+    var address by rememberSaveable { mutableStateOf("") }
+    var district by rememberSaveable { mutableStateOf("") }
     var done by rememberSaveable { mutableStateOf(false) }
     var error by remember { mutableStateOf<SignUpError?>(null) }
 
@@ -320,6 +328,7 @@ fun SignUpScreen(store: KuskaStore, onBack: () -> Unit, onGoToLogin: () -> Unit)
         }
         if (error == null) {
             store.saveUser(dni.trim(), n, phone.trim(), pass, e)
+            store.saveAddressFor(dni.trim(), address, district)
             done = true
         }
     }
@@ -338,6 +347,7 @@ fun SignUpScreen(store: KuskaStore, onBack: () -> Unit, onGoToLogin: () -> Unit)
                 SuccessCheck()
                 Text(
                     "¡Cuenta creada, $first!",
+                    fontFamily = KFont.Title,
                     fontSize = 22.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = K.Ink,
@@ -363,6 +373,19 @@ fun SignUpScreen(store: KuskaStore, onBack: () -> Unit, onGoToLogin: () -> Unit)
                 pass = pass, onPass = { pass = it; error = null },
                 pass2 = pass2, onPass2 = { pass2 = it; error = null },
                 email = email, onEmail = { email = it; error = null },
+                address = address, onAddress = { address = it },
+                district = district, onDistrict = { district = it },
+                onScanned = { d ->
+                    d.fullName?.let { name = it }
+                    d.dni?.let { dni = it }
+                    d.address?.let { address = it }
+                    d.district?.let { district = it }
+                    error = null
+                },
+                onLocated = { g ->
+                    g.address?.let { address = it }
+                    g.district?.let { district = it }
+                },
                 onBack = onBack,
                 onCreate = ::create,
             )
@@ -379,6 +402,10 @@ private fun androidx.compose.foundation.layout.ColumnScope.SignUpForm(
     pass: String, onPass: (String) -> Unit,
     pass2: String, onPass2: (String) -> Unit,
     email: String, onEmail: (String) -> Unit,
+    address: String, onAddress: (String) -> Unit,
+    district: String, onDistrict: (String) -> Unit,
+    onScanned: (pe.kuskago.app.data.identity.DniData) -> Unit,
+    onLocated: (pe.kuskago.app.data.identity.AddressGuess) -> Unit,
     onBack: () -> Unit,
     onCreate: () -> Unit,
 ) {
@@ -391,6 +418,8 @@ private fun androidx.compose.foundation.layout.ColumnScope.SignUpForm(
     ) {
         error?.let { ErrorCard(it.title, it.body, Modifier.padding(bottom = 16.dp)) }
 
+        pe.kuskago.app.ui.components.ScanDniCard(onResult = onScanned, modifier = Modifier.padding(bottom = 18.dp))
+
         FieldLabel("Nombres completos")
         KTextField(name, onName, "Ej. Juan Quispe", Modifier.padding(bottom = 16.dp))
         FieldLabel("DNI")
@@ -402,7 +431,16 @@ private fun androidx.compose.foundation.layout.ColumnScope.SignUpForm(
         FieldLabel("Confirmar contraseña")
         KTextField(pass2, onPass2, "Repite tu contraseña", Modifier.padding(bottom = 16.dp), password = true)
         FieldLabel("Correo electrónico", extra = "(opcional)")
-        KTextField(email, onEmail, "usuario@correo.com", Modifier.padding(bottom = 26.dp), keyboardType = KeyboardType.Email)
+        KTextField(email, onEmail, "usuario@correo.com", Modifier.padding(bottom = 16.dp), keyboardType = KeyboardType.Email)
+        FieldLabel("Dirección de tu casa", extra = "(opcional)")
+        KTextField(address, onAddress, "Jr./Av., número, barrio", Modifier.padding(bottom = 8.dp))
+        pe.kuskago.app.ui.components.UseMyLocationButton(onResult = onLocated, modifier = Modifier.padding(bottom = 16.dp))
+        FieldLabel("Distrito", extra = "(opcional)")
+        KTextField(district, onDistrict, "Ej. Puno", Modifier.padding(bottom = 6.dp))
+        Text(
+            "Con tu dirección y distrito completamos tus trámites y te mostramos las oficinas más cercanas.",
+            fontSize = 12.sp, color = K.Muted2, modifier = Modifier.padding(bottom = 22.dp),
+        )
         PrimaryButton("Crear cuenta", onCreate)
         Spacer(Modifier.height(20.dp))
     }
@@ -461,7 +499,7 @@ fun ForgotPasswordScreen(store: KuskaStore, onExit: () -> Unit, onGoToLogin: () 
                             showBox = false,
                             role = Role.RadioButton,
                         ) {
-                            Text("📱 SMS al 9xx xxx x21", fontWeight = FontWeight.Bold, color = K.Ink, modifier = Modifier.weight(1f))
+                            IconLabel("📱 SMS al 9xx xxx x21", fontWeight = FontWeight.Bold, color = K.Ink, modifier = Modifier.weight(1f))
                         }
                         if (hasEmail) {
                             CheckboxCard(
@@ -470,7 +508,7 @@ fun ForgotPasswordScreen(store: KuskaStore, onExit: () -> Unit, onGoToLogin: () 
                                 showBox = false,
                                 role = Role.RadioButton,
                             ) {
-                                Text(
+                                IconLabel(
                                     "✉️ Correo ${maskEmail(account!!.email)}",
                                     fontWeight = FontWeight.Bold,
                                     color = K.Ink,
@@ -480,7 +518,7 @@ fun ForgotPasswordScreen(store: KuskaStore, onExit: () -> Unit, onGoToLogin: () 
                         } else {
                             CheckboxCard(checked = false, onClick = {}, showBox = false, enabled = false) {
                                 Column(Modifier.weight(1f)) {
-                                    Text("✉️ Correo electrónico", fontWeight = FontWeight.Bold, color = K.Ink)
+                                    IconLabel("✉️ Correo electrónico", fontWeight = FontWeight.Bold, color = K.Ink)
                                     Text("No registraste un correo", fontSize = 12.sp, color = K.Muted2, fontWeight = FontWeight.SemiBold)
                                 }
                             }
@@ -497,6 +535,7 @@ fun ForgotPasswordScreen(store: KuskaStore, onExit: () -> Unit, onGoToLogin: () 
                         placeholder = "• • • • • •",
                         keyboardType = KeyboardType.NumberPassword,
                         textStyle = TextStyle(
+                            fontFamily = KFont.Body,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.ExtraBold,
                             letterSpacing = 8.sp,
@@ -540,7 +579,7 @@ fun ForgotPasswordScreen(store: KuskaStore, onExit: () -> Unit, onGoToLogin: () 
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
                         SuccessCheck(80.dp)
-                        Text("Contraseña actualizada", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = K.Ink)
+                        Text("Contraseña actualizada", fontFamily = KFont.Title, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = K.Ink)
                         Text(
                             "Ya puedes iniciar sesión con tu nueva contraseña.",
                             fontSize = 14.sp,

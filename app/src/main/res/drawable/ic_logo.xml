@@ -1,8 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Logo dentro de la app: el mismo monograma "K" sobre un cuadrado azul redondeado -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="26dp" android:height="26dp"
     android:viewportWidth="30" android:viewportHeight="30">
-    <path android:pathData="M0,15 a15,15 0 1,0 30,0 a15,15 0 1,0 -30,0 Z" android:fillColor="#DCEFE6" />
-    <path android:pathData="M4 20L11 9L16 16L19 11L26 20Z" android:fillColor="#176B57" />
-    <path android:pathData="M15 30C15 30 9 26 9 21C9 24 12 26 15 22C18 26 21 24 21 21C21 26 15 30 15 30Z" android:fillColor="#5FBE93" />
+    <path android:fillColor="#0B7A55"
+        android:pathData="M7,0h16a7,7 0 0,1 7,7v16a7,7 0 0,1 -7,7h-16a7,7 0 0,1 -7,-7v-16a7,7 0 0,1 7,-7z" />
+    <path android:fillColor="#FFFAF0"
+        android:pathData="M9.7,6h1.6a1.2,1.2 0 0,1 1.2,1.2v15.6a1.2,1.2 0 0,1 -1.2,1.2h-1.6a1.2,1.2 0 0,1 -1.2,-1.2v-15.6a1.2,1.2 0 0,1 1.2,-1.2z" />
+    <path android:strokeColor="#FFFAF0" android:strokeWidth="3.75" android:strokeLineCap="round"
+        android:pathData="M13,15L20.5,7" />
+    <path android:strokeColor="#F5B700" android:strokeWidth="3.75" android:strokeLineCap="round"
+        android:pathData="M13,15L19,21.5" />
+    <path android:fillColor="#F5B700" android:pathData="M17.5,25L23,25L23,19.5Z" />
 </vector>

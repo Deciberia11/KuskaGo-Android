@@ -1,12 +1,14 @@
 package pe.kuskago.app.data
 
 import android.content.Context
+import pe.kuskago.app.data.db.DatoUsuarioEntity
 import pe.kuskago.app.data.db.DocumentoEntity
 import pe.kuskago.app.data.db.FamiliarEntity
 import pe.kuskago.app.data.db.KuskaDatabase
 import pe.kuskago.app.data.db.PasoRutaEntity
 import pe.kuskago.app.data.db.PreferenciasEntity
 import pe.kuskago.app.data.db.SesionEntity
+import pe.kuskago.app.data.db.TramiteEntity
 import pe.kuskago.app.data.db.UsuarioEntity
 import java.security.MessageDigest
 
@@ -42,6 +44,18 @@ data class StoredDoc(
     val uri: String = "",
 )
 
+/** Trámite del usuario para la pantalla "Mis trámites". */
+data class MyTramite(
+    val id: Long,
+    val type: String,
+    val title: String,
+    val entity: String,
+    val status: String,
+    val progress: Int,
+    val documentName: String,
+    val updated: Long,
+)
+
 data class FamilyMember(val name: String, val relation: String, val dni: String, val icon: String)
 
 /**
@@ -62,6 +76,8 @@ class KuskaStore(context: Context) {
     private val documentos = db.documentoDao()
     private val familiares = db.familiarDao()
     private val pasosRuta = db.pasoRutaDao()
+    private val datosUsuario = db.datoUsuarioDao()
+    private val tramites = db.tramiteDao()
 
     // ======================= CUENTAS =======================
 
@@ -94,6 +110,15 @@ class KuskaStore(context: Context) {
     }
 
     // ======================= SESIÓN =======================
+
+    private val settings = context.applicationContext.getSharedPreferences("kuskago_settings", Context.MODE_PRIVATE)
+
+    /** "Recordarme" del inicio de sesión: si es true, la app abre directo en Inicio. */
+    fun rememberSession(): Boolean = settings.getBoolean("remember_session", false)
+
+    fun setRememberSession(value: Boolean) {
+        settings.edit().putBoolean("remember_session", value).apply()
+    }
 
     fun currentUser(): CurrentUser? =
         sesion.actual()?.let { CurrentUser(it.dni, it.nombre) }
@@ -217,6 +242,101 @@ class KuskaStore(context: Context) {
         pasosRuta.reemplazar(dni, done.sorted().map { PasoRutaEntity(dni, it) })
     }
 
+    // ======================= MEMORIA DE DATOS PARA TRÁMITES =======================
+
+    /**
+     * Todo lo que ya sabemos del usuario: datos de su cuenta (nombre, DNI, celular, distrito)
+     * más lo que respondió en trámites anteriores (tabla dato_usuario).
+     * Las claves son las de [PERSONAL_LABELS].
+     */
+    fun getPersonalData(): Map<String, String> {
+        val cur = currentUser() ?: return emptyMap()
+        val u = usuarios.buscar(cur.dni)
+        val base = buildMap {
+            put("dni", cur.dni)
+            u?.nombre?.takeIf { it.isNotBlank() }?.let { put("nombre", it) }
+            u?.celular?.takeIf { it.isNotBlank() }?.let { put("celular", it) }
+            u?.distrito?.takeIf { it.isNotBlank() }?.let { put("distrito", it) }
+            u?.correo?.takeIf { it.isNotBlank() }?.let { put("correo", it) }
+        }
+        val extra = datosUsuario.listar(cur.dni).associate { it.clave to it.valor }
+        return base + extra.filterValues { it.isNotBlank() }
+    }
+
+    /**
+     * Guarda las respuestas para no volver a pedirlas.
+     * Nombre, celular y distrito actualizan la cuenta; el DNI no se cambia (es el usuario).
+     */
+    fun savePersonalData(values: Map<String, String>) {
+        val cur = currentUser() ?: return
+        val clean = values.mapValues { it.value.trim() }.filterValues { it.isNotBlank() }
+        if (clean.isEmpty()) return
+        val u = usuarios.buscar(cur.dni)
+        if (u != null && (clean.containsKey("nombre") || clean.containsKey("celular") || clean.containsKey("distrito"))) {
+            usuarios.actualizarPerfil(
+                cur.dni,
+                clean["nombre"] ?: u.nombre,
+                clean["celular"] ?: u.celular,
+                clean["distrito"] ?: u.distrito,
+            )
+            clean["nombre"]?.let { sesion.abrir(SesionEntity(dni = cur.dni, nombre = it)) }
+        }
+        val otros = clean.filterKeys { it !in ACCOUNT_KEYS }
+        if (otros.isNotEmpty()) {
+            datosUsuario.guardarTodos(otros.map { (k, v) -> DatoUsuarioEntity(cur.dni, k, v) })
+        }
+    }
+
+    /** Guarda dirección y distrito de una cuenta recién creada (por ejemplo, leídos del DNI). */
+    fun saveAddressFor(dni: String, address: String, district: String) {
+        val u = usuarios.buscar(dni) ?: return
+        if (district.isNotBlank()) usuarios.actualizarPerfil(dni, u.nombre, u.celular, district.trim())
+        if (address.isNotBlank()) datosUsuario.guardarTodos(listOf(DatoUsuarioEntity(dni, "domicilio", address.trim())))
+    }
+
+    /** Datos guardados de trámites (para verlos y borrarlos en "Editar datos"). */
+    fun getSavedTramiteData(): List<Pair<String, String>> {
+        val cur = currentUser() ?: return emptyList()
+        return datosUsuario.listar(cur.dni).map { it.clave to it.valor }
+    }
+
+    fun deletePersonalData(key: String) {
+        val cur = currentUser() ?: return
+        datosUsuario.borrar(cur.dni, key)
+    }
+
+    // ======================= MIS TRÁMITES =======================
+
+    fun getTramites(): List<MyTramite> {
+        val dni = dniActual() ?: return emptyList()
+        return tramites.listar(dni).map {
+            MyTramite(it.id, it.tipo, it.titulo, it.entidad, it.estado, it.progreso, it.documentoNombre, it.actualizado)
+        }
+    }
+
+    /** Registra un trámite cuando el usuario genera su documento. */
+    fun addTramite(type: String, title: String, entity: String, documentName: String): Long {
+        val dni = dniActual() ?: return -1
+        return tramites.insertar(
+            TramiteEntity(
+                dni = dni, tipo = type, titulo = title, entidad = entity,
+                estado = STATUS_GENERATED, progreso = 50, documentoNombre = documentName,
+            )
+        )
+    }
+
+    fun setTramiteStatus(id: Long, status: String) {
+        val progress = when (status) {
+            STATUS_GENERATED -> 50
+            STATUS_SUBMITTED -> 80
+            STATUS_DONE -> 100
+            else -> 60
+        }
+        tramites.cambiarEstado(id, status, progress, System.currentTimeMillis())
+    }
+
+    fun deleteTramite(id: Long) = tramites.borrar(id)
+
     // ======================= DATOS DE EJEMPLO =======================
 
     /** Al crear un usuario se cargan los datos de ejemplo del prototipo. */
@@ -232,9 +352,42 @@ class KuskaStore(context: Context) {
             },
         )
         pasosRuta.reemplazar(dni, listOf(PasoRutaEntity(dni, 1), PasoRutaEntity(dni, 2)))
+        tramites.insertar(
+            TramiteEntity(
+                dni = dni, tipo = "terreno", titulo = "Registro de terreno", entidad = "COFOPRI",
+                estado = STATUS_IN_PROGRESS, progreso = 60,
+            )
+        )
     }
 
     companion object {
+        const val STATUS_IN_PROGRESS = "EN_CURSO"
+        const val STATUS_GENERATED = "GENERADO"
+        const val STATUS_SUBMITTED = "PRESENTADO"
+        const val STATUS_DONE = "FINALIZADO"
+
+        /** Datos que viven en la tabla usuario (el resto va a dato_usuario). */
+        private val ACCOUNT_KEYS = setOf("nombre", "dni", "celular", "distrito", "correo")
+
+        /** Nombre visible de cada dato que la app recuerda. */
+        val PERSONAL_LABELS = mapOf(
+            "nombre" to "Nombre completo",
+            "dni" to "DNI",
+            "celular" to "Celular",
+            "correo" to "Correo",
+            "distrito" to "Distrito donde vives",
+            "domicilio" to "Dirección de tu casa",
+            "edad" to "Edad",
+            "predio_ubicacion" to "Ubicación del terreno",
+            "predio_area" to "Área del terreno",
+            "predio_direccion" to "Dirección del predio",
+            "predio_distrito" to "Distrito del predio",
+            "posesion_tiempo" to "Tiempo de posesión",
+            "negocio_nombre" to "Nombre del negocio",
+            "negocio_direccion" to "Dirección del local",
+            "negocio_giro" to "Giro del negocio",
+        )
+
         /** Cuenta de prueba del prototipo: DNI 12345678 con cualquier contraseña. */
         const val DEMO_DNI = "12345678"
         const val DEMO_NAME = "Juan Quispe"

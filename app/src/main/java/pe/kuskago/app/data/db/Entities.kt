@@ -13,7 +13,10 @@ import androidx.room.PrimaryKey
  *     ├── preferencias   (1 a 1, dni PK/FK)
  *     ├── documento      (1 a N, dni FK)
  *     ├── familiar       (1 a N, dni_titular FK)
- *     └── paso_ruta      (1 a N, PK compuesta dni + paso)
+ *     ├── paso_ruta      (1 a N, PK compuesta dni + paso)
+ *     ├── dato_usuario   (1 a N, PK compuesta dni + clave): datos que el usuario ya respondió
+ *     │                  en trámites (dirección del terreno, edad...) para no volver a pedirlos
+ *     └── tramite        (1 a N, dni FK): trámites iniciados por el usuario y su estado
  *   sesion (una sola fila: quién tiene la sesión abierta)
  *
  * Todas las FK usan ON DELETE CASCADE: si se borra un usuario, se borran sus datos.
@@ -118,4 +121,59 @@ data class FamiliarEntity(
 data class PasoRutaEntity(
     val dni: String,
     val paso: Int,
+)
+
+/**
+ * Datos personales reutilizables entre trámites (memoria de formularios).
+ * Ej.: (12345678, "predio_ubicacion", "Sector Chuquibambilla, Puno").
+ */
+@Entity(
+    tableName = "dato_usuario",
+    primaryKeys = ["dni", "clave"],
+    foreignKeys = [
+        ForeignKey(
+            entity = UsuarioEntity::class,
+            parentColumns = ["dni"],
+            childColumns = ["dni"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+)
+data class DatoUsuarioEntity(
+    val dni: String,
+    val clave: String,
+    val valor: String,
+    /** Fecha de la última actualización (milisegundos). */
+    val actualizado: Long = System.currentTimeMillis(),
+)
+
+/**
+ * Trámite iniciado por el usuario (sección "Mis trámites").
+ * estado: GENERADO → PRESENTADO → FINALIZADO  (o EN_CURSO para el de ejemplo)
+ */
+@Entity(
+    tableName = "tramite",
+    foreignKeys = [
+        ForeignKey(
+            entity = UsuarioEntity::class,
+            parentColumns = ["dni"],
+            childColumns = ["dni"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [Index("dni")],
+)
+data class TramiteEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val dni: String,
+    /** Tipo del formulario: terreno, constancia, dni, pension65, herencia, licencia. */
+    val tipo: String,
+    val titulo: String,
+    val entidad: String,
+    val estado: String,
+    /** Avance de 0 a 100. */
+    val progreso: Int,
+    @ColumnInfo(name = "documento_nombre") val documentoNombre: String = "",
+    val creado: Long = System.currentTimeMillis(),
+    val actualizado: Long = System.currentTimeMillis(),
 )

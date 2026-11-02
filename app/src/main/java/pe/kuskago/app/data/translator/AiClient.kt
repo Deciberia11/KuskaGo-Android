@@ -115,8 +115,8 @@ object AiClient {
             when {
                 names.isEmpty() -> Outcome.Error("Ollama funciona, pero no tiene modelos. En tu PC ejecuta: ollama pull ${settings.ollamaModel}")
                 !found ->
-                    Outcome.Error("Conectado ✓, pero falta el modelo \"${settings.ollamaModel}\". Modelos en tu PC: ${names.joinToString(", ")}. Ejecuta: ollama pull ${settings.ollamaModel}")
-                else -> Outcome.Ok("Conectado ✓ · modelo \"${settings.ollamaModel}\" listo.")
+                    Outcome.Error("Conectado, pero falta el modelo \"${settings.ollamaModel}\". Modelos en tu PC: ${names.joinToString(", ")}. Ejecuta: ollama pull ${settings.ollamaModel}")
+                else -> Outcome.Ok("Conectado · modelo \"${settings.ollamaModel}\" listo.")
             }
         } catch (e: Exception) {
             Outcome.Error(connectionHelp(settings, e))

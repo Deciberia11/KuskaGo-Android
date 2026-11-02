@@ -34,8 +34,8 @@ Si Android Studio sugiere actualizar el plugin de Android Gradle, puedes aceptar
 - Mis documentos: subir PDF o foto del teléfono, crear documentos de texto, ver, compartir, reemplazar y eliminar (se guardan en el teléfono).
 - Mi familia: agregar familiares (con validación de DNI) y crear trámite familiar de herencia.
 - Pedir ayuda: tema → canal → respuesta que lleva a la pantalla adecuada.
-- Ruta Ciudadana: pasos que se marcan como completados (se guardan), explicación de cada paso y puntos de atención con "Cómo llegar" en Google Maps.
-- KuskaAlert: filtros Todas / Importantes / Urgentes, detalle y recordatorios.
+- Ruta Ciudadana: pasos que se marcan como completados (se guardan), explicación de cada paso y **mapa real (OpenStreetMap)** con los puntos de atención de tu distrito, tu ubicación, distancia y "Cómo llegar" (abre Google Maps).
+- KuskaAlert: avisos **generados desde Mis trámites** (documento listo, recordatorio si no lo presentas en 3 días, esperando respuesta) + filtros Todas / Importantes / Urgentes. El número de la campana en Inicio es real.
 - Perfil y Editar datos (nombre, celular y distrito se guardan).
 - Flujo completo en modo sencillo con botones grandes y voz.
 
@@ -47,18 +47,20 @@ app/src/main/java/pe/kuskago/app/
 ├── data/
 │   ├── KuskaStore.kt          ← Repositorio: único acceso a los datos desde las pantallas
 │   └── db/
-│       ├── Entities.kt        ← tablas SQLite (usuario, sesion, preferencias, documento, familiar, paso_ruta)
+│       ├── Entities.kt        ← tablas SQLite (usuario, sesion, preferencias, documento, familiar, paso_ruta, dato_usuario, tramite)
 │       ├── Daos.kt            ← consultas SQL (Room DAOs)
 │       └── KuskaDatabase.kt   ← base de datos Room "kuskago.db" (Singleton)
 │   └── translator/
 │       ├── BureaucracyTranslator.kt ← algoritmo del traductor (sin internet)
 │       └── AiClient.kt        ← explicación con IA (Ollama local o Gemini)
+│   └── maps/PlaceFinder.kt    ← búsqueda de lugares y direcciones (Nominatim / OpenStreetMap) con caché
+│   └── identity/              ← lectura del DNI (ML Kit + DniTextParser) y dirección por GPS
 └── ui/
     ├── theme/Theme.kt         ← colores y escalas de texto del prototipo
     ├── components/Components.kt ← botones, tarjetas, campos, franja andina, barra inferior
     ├── components/Extra.kt    ← barra inferior, filas, voz, imprimir/PDF, enlaces
     └── screens/               ← AuthScreens, PreferenceScreens, MainScreens,
-                                 TramiteScreens, TranslatorScreen, PersonalScreens
+                                 TramiteScreens, TranslatorScreen, PersonalScreens, MyTramitesScreen, RouteMap
 app/src/main/res/drawable/     ← logo, avatar e ilustración convertidos de los SVG originales
 ```
 
@@ -110,6 +112,71 @@ Todos los datos se guardan en el archivo `kuskago.db` dentro del teléfono (no h
 | `documento` | `id` (PK), `dni` (FK) | 1 a N |
 | `familiar` | `id` (PK), `dni_titular` (FK) | 1 a N |
 | `paso_ruta` | (`dni`, `paso`) PK compuesta | 1 a N |
+| `dato_usuario` | (`dni`, `clave`) PK compuesta | 1 a N — datos que el usuario ya dio en trámites |
+| `tramite` | `id` (PK), `dni` (FK) | 1 a N — "Mis trámites": tipo, entidad, estado y avance |
+
+### Memoria de datos (no volver a pedir lo mismo)
+Al iniciar un trámite, el formulario se rellena con lo que la app ya sabe del usuario
+(nombre, DNI, celular y distrito de su cuenta + respuestas de trámites anteriores guardadas en `dato_usuario`):
+1. Muestra **"Ya tenemos estos datos tuyos"** para confirmarlos.
+2. **Solo pregunta lo que falta.**
+3. Al terminar, guarda las nuevas respuestas para el próximo trámite
+   (por ejemplo, la ubicación del terreno sirve para *Registro de terreno* y *Constancia de posesión*).
+El usuario puede ver y borrar estos datos en **Perfil → Editar datos**.
+La base de datos está en la **versión 3** con migraciones (`MIGRATION_1_2`, `MIGRATION_2_3`), así que al actualizar la app no se pierden los datos existentes.
+
+### Mis trámites
+Cada formulario completado se registra en la tabla `tramite` con su estado:
+**Documento listo (50%) → Presentado (80%) → Finalizado (100%)**. La pantalla muestra el avance,
+"lo que sigue" en palabras simples, las etapas y acciones (ya lo presenté, ver documento, ver ruta).
+
+### Autocompletar datos con el DNI o la ubicación (gratis)
+- **📷 Completar con mi DNI** (Crear cuenta, Editar datos y preguntas de domicilio): se toma una foto del DNI
+  (o se elige de la galería) y **ML Kit Text Recognition** lee el texto **en el celular, sin internet**.
+  `data/identity/DniTextParser.kt` interpreta el texto: zona MRZ del DNIe (`I<PER12345678`, `APELLIDO<APELLIDO<<NOMBRES`)
+  y etiquetas impresas (Primer Apellido, Pre Nombres, Dirección, Departamento/Provincia/Distrito).
+  Se pueden escanear las dos caras: la segunda completa lo que faltó. **La foto se borra apenas se lee.**
+- **📍 Usar mi ubicación** (dirección de casa, ubicación/dirección/distrito del terreno o del local):
+  GPS → dirección con el Geocoder de Android o, si no está disponible, Nominatim (OpenStreetMap).
+- Siempre se muestra el resultado en los campos para que la persona **lo revise y corrija** antes de guardar.
+- ¿Por qué no se trae la dirección directamente desde RENIEC? Ese dato solo lo entrega el servicio oficial
+  (Nivel II, ~S/ 1.20 por consulta, solo para empresas o entidades con convenio). Las APIs gratuitas de DNI solo dan el nombre.
+
+### Mapa (OpenStreetMap, gratis y sin clave)
+- Librería **osmdroid** (`org.osmdroid:osmdroid-android`), código en `ui/screens/RouteMap.kt`.
+- Los puntos (Municipalidad, Banco de la Nación, COFOPRI, RENIEC) se buscan en el **distrito del perfil**
+  con **Nominatim** (`data/maps/PlaceFinder.kt`), respetando su política: 1 consulta/segundo, User-Agent propio
+  y caché en el teléfono (cada búsqueda se hace una sola vez).
+- "Mi ubicación" pide permiso de ubicación (opcional) y muestra la distancia a cada punto.
+- En el emulador, la ubicación se simula en *Extended controls (⋯) → Location*.
+
+### Identidad visual (colores, tipografía e íconos)
+Definida en `ui/theme/Theme.kt` (objeto `K` para colores y `KFont` para fuentes).
+
+Paleta "viva": los colores originales del prototipo (verde andino, menta, mostaza, terracota, celeste, crema),
+más saturados y luminosos, con todo texto a 4.5:1 o más (WCAG AA) para el público adulto.
+
+| Color | HEX | Uso | Contraste |
+|---|---|---|---|
+| Verde KuskaGo | `#0B7A55` | principal: botones, enlaces, selección | con blanco 5.3:1 (AA) |
+| Menta | `#DFF5EA` | fondos suaves; encima verde `#075C40` | 7.0:1 (AAA) |
+| Oro Inti | `#F5B700` | insignias y avisos, siempre con texto oscuro | con tinta 7.8:1 (AAA) |
+| Terracota | `#C2410C` | acento andino, "Pedir ayuda" | con blanco 5.2:1 (AA) |
+| Celeste | `#1565C0` | información, "Mis trámites" | con blanco 5.8:1 (AA) |
+| Rojo alerta | `#C62828` | urgente y errores | con blanco 5.6:1 (AA) |
+| Morado | `#6F35B5` | familia | con blanco 7.4:1 (AAA) |
+| Crema | `#FFFAF0` | fondo de pantallas | — |
+| Tinta | `#14302A` | texto | sobre crema 13.6:1 (AAA) |
+
+- **Tipografías** (Google Fonts, licencia OFL, guardadas en `res/font` para funcionar sin internet):
+  **Open Sans** (texto, formularios y títulos en negrita) y **Montserrat** (botones).
+- **Íconos:** Material Icons de Google (estilo *Rounded*, el estándar de Android) en lugar de emojis,
+  definidos en `ui/components/KIcons.kt`. Barra inferior al estilo Material 3: ícono relleno en la sección activa
+  y de contorno en las demás. Siempre van acompañados de texto, y el color nunca es la única señal.
+
+### Accesibilidad en toda la app
+- **Texto grande** (niveles 1–5 en Preferencias/Accesibilidad) se aplica a **todas** las pantallas.
+- **Recordarme** en el inicio de sesión: la app abre directo en Inicio (o en Modo sencillo si se eligió "paso a paso").
 
 Las claves foráneas usan `ON DELETE CASCADE`. Para **ver las tablas con la app abierta**:
 Android Studio → **View → Tool Windows → App Inspection → Database Inspector** → `kuskago.db`.
