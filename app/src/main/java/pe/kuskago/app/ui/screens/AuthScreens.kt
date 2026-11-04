@@ -90,19 +90,14 @@ fun WelcomeScreen(onStart: () -> Unit, onHaveAccount: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Image(
-                painter = painterResource(R.drawable.img_welcome),
-                contentDescription = null,
+                painter = painterResource(R.drawable.ic_logo),
+                contentDescription = "Logo de KuskaGo",
                 modifier = Modifier.size(152.dp),
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Image(
-                    painter = painterResource(R.drawable.ic_logo),
-                    contentDescription = null,
-                    modifier = Modifier.size(26.dp),
-                )
                 Text(
                     "KuskaGo",
                     fontFamily = KFont.Title,
@@ -194,7 +189,7 @@ fun LoginScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Image(painterResource(R.drawable.ic_logo), null, Modifier.size(52.dp))
+                Image(painterResource(R.drawable.ic_logo), "Logo de KuskaGo", Modifier.size(64.dp))
                 Text("KuskaGo", fontFamily = KFont.Title, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = K.GreenDark)
             }
             Text(
@@ -261,7 +256,10 @@ fun LoginScreen(
                         .padding(vertical = 12.dp),
                 )
             }
-            PrimaryButton("Iniciar sesión", ::attemptLogin)
+            if (dni.length != 8 || pass.isBlank()) {
+                Hint("Para continuar, ingresa los 8 dígitos del DNI y tu contraseña.")
+            }
+            PrimaryButton("Iniciar sesión", ::attemptLogin, enabled = DNI_REGEX.matches(dni.trim()) && pass.isNotBlank())
 
             KCard(
                 modifier = Modifier
@@ -273,7 +271,7 @@ fun LoginScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                KIcon("📝", size = 34.dp, tint = K.WarnText)
+                KIcon(":editnote:", size = 34.dp, tint = K.WarnText)
                 Text("¿Primera vez en KuskaGo?", fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, color = K.Ink)
                 Text(
                     "Crea tu cuenta gratis en 1 minuto para guardar tus trámites y documentos.",
@@ -459,6 +457,7 @@ fun ForgotPasswordScreen(store: KuskaStore, onExit: () -> Unit, onGoToLogin: () 
     var code by rememberSaveable { mutableStateOf("") }
     var newPass by rememberSaveable { mutableStateOf("") }
     var newPass2 by rememberSaveable { mutableStateOf("") }
+    var recoveryError by rememberSaveable { mutableStateOf<String?>(null) }
 
     val account = remember(dni) { store.getUser(dni.trim()) }
     val hasEmail = !account?.email.isNullOrBlank()
@@ -476,6 +475,7 @@ fun ForgotPasswordScreen(store: KuskaStore, onExit: () -> Unit, onGoToLogin: () 
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp, vertical = 6.dp),
         ) {
+            recoveryError?.let { ErrorCard("No se pudo continuar", it, Modifier.padding(bottom = 16.dp)) }
             when (step) {
                 ForgotStep.DNI -> {
                     Hint("Ingresa tu DNI para verificar tu identidad.")
@@ -484,7 +484,7 @@ fun ForgotPasswordScreen(store: KuskaStore, onExit: () -> Unit, onGoToLogin: () 
                         dni, { dni = onlyDigits(it, 8) }, "Ingresa tu DNI",
                         Modifier.padding(bottom = 26.dp), keyboardType = KeyboardType.Number,
                     )
-                    PrimaryButton("Continuar", { channelEmail = false; step = ForgotStep.CHANNEL })
+                    PrimaryButton("Continuar", { channelEmail = false; step = ForgotStep.CHANNEL }, enabled = DNI_REGEX.matches(dni.trim()))
                 }
 
                 ForgotStep.CHANNEL -> {
@@ -499,7 +499,7 @@ fun ForgotPasswordScreen(store: KuskaStore, onExit: () -> Unit, onGoToLogin: () 
                             showBox = false,
                             role = Role.RadioButton,
                         ) {
-                            IconLabel("📱 SMS al 9xx xxx x21", fontWeight = FontWeight.Bold, color = K.Ink, modifier = Modifier.weight(1f))
+                            IconLabel(":smartphone: SMS al 9xx xxx x21", fontWeight = FontWeight.Bold, color = K.Ink, modifier = Modifier.weight(1f))
                         }
                         if (hasEmail) {
                             CheckboxCard(
@@ -509,7 +509,7 @@ fun ForgotPasswordScreen(store: KuskaStore, onExit: () -> Unit, onGoToLogin: () 
                                 role = Role.RadioButton,
                             ) {
                                 IconLabel(
-                                    "✉️ Correo ${maskEmail(account!!.email)}",
+                                    ":email: Correo ${maskEmail(account!!.email)}",
                                     fontWeight = FontWeight.Bold,
                                     color = K.Ink,
                                     modifier = Modifier.weight(1f),
@@ -518,7 +518,7 @@ fun ForgotPasswordScreen(store: KuskaStore, onExit: () -> Unit, onGoToLogin: () 
                         } else {
                             CheckboxCard(checked = false, onClick = {}, showBox = false, enabled = false) {
                                 Column(Modifier.weight(1f)) {
-                                    IconLabel("✉️ Correo electrónico", fontWeight = FontWeight.Bold, color = K.Ink)
+                                    IconLabel(":email: Correo electrónico", fontWeight = FontWeight.Bold, color = K.Ink)
                                     Text("No registraste un correo", fontSize = 12.sp, color = K.Muted2, fontWeight = FontWeight.SemiBold)
                                 }
                             }
@@ -555,7 +555,7 @@ fun ForgotPasswordScreen(store: KuskaStore, onExit: () -> Unit, onGoToLogin: () 
                             .padding(vertical = 6.dp),
                     )
                     Spacer(Modifier.height(20.dp))
-                    PrimaryButton("Verificar", { step = ForgotStep.NEW_PASS })
+                    PrimaryButton("Verificar", { step = ForgotStep.NEW_PASS }, enabled = code.length == 6)
                 }
 
                 ForgotStep.NEW_PASS -> {
@@ -564,10 +564,16 @@ fun ForgotPasswordScreen(store: KuskaStore, onExit: () -> Unit, onGoToLogin: () 
                     FieldLabel("Confirmar contraseña")
                     KTextField(newPass2, { newPass2 = it }, "Repite la contraseña", Modifier.padding(bottom = 26.dp), password = true)
                     PrimaryButton("Guardar contraseña", {
-                        // Si la cuenta existe y las contraseñas coinciden, se actualiza de verdad.
-                        if (newPass.isNotBlank() && newPass == newPass2) store.updatePassword(dni.trim(), newPass)
-                        step = ForgotStep.CONFIRM
-                    })
+                        recoveryError = null
+                        if (store.updatePassword(dni.trim(), newPass)) {
+                            step = ForgotStep.CONFIRM
+                        } else {
+                            recoveryError = "No encontramos una cuenta registrada con ese DNI. Revisa el número antes de continuar."
+                        }
+                    }, enabled = newPass.isNotBlank() && newPass == newPass2)
+                    if (newPass2.isNotEmpty() && newPass != newPass2) {
+                        Hint("Las contraseñas deben coincidir para poder guardarlas.")
+                    }
                 }
 
                 ForgotStep.CONFIRM -> {

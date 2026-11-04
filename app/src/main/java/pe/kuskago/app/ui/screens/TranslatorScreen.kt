@@ -50,6 +50,7 @@ import pe.kuskago.app.ui.components.Screen
 import pe.kuskago.app.ui.components.SecondaryButton
 import pe.kuskago.app.ui.components.SectionLabel
 import pe.kuskago.app.ui.components.TopBar
+import pe.kuskago.app.ui.components.Speaker
 import pe.kuskago.app.ui.components.rememberSpeaker
 import pe.kuskago.app.ui.theme.K
 import pe.kuskago.app.ui.components.IconLabel
@@ -94,10 +95,12 @@ fun TranslatorScreen(onBack: () -> Unit) {
     }
 
     fun runLocal() {
+        speak.stop()
         result = BureaucracyTranslator.translate(docText)
     }
 
     fun runAi() {
+        speak.stop()
         aiError = null
         aiText = null
         aiLoading = true
@@ -113,9 +116,9 @@ fun TranslatorScreen(onBack: () -> Unit) {
     Screen {
         TopBar(onBack = onBack, title = "Traductor de burocracia")
         PillTabs(
-            tabs = listOf("local" to "Sin internet", "ia" to "✨ Con IA"),
+            tabs = listOf("local" to "Sin internet", "ia" to "Con IA"),
             selected = mode,
-            onSelect = { mode = it },
+            onSelect = { speak.stop(); mode = it },
         )
         Box(Modifier.weight(1f)) {
             Column(
@@ -129,7 +132,7 @@ fun TranslatorScreen(onBack: () -> Unit) {
                     else "La IA lee tu documento y te explica qué dice, qué tienes que hacer y el plazo.",
                     fontSize = 13.5.sp, color = K.Muted, lineHeight = 19.sp, modifier = Modifier.padding(bottom = 12.dp),
                 )
-                ChoiceCard("📎 Subir documento (.txt)", { picker.launch(arrayOf("text/plain")) }, Modifier.padding(bottom = 10.dp))
+                ChoiceCard(":attachfile: Subir documento (.txt)", { picker.launch(arrayOf("text/plain")) }, Modifier.padding(bottom = 10.dp))
                 KTextField(
                     value = docText,
                     onValueChange = { docText = it },
@@ -163,15 +166,15 @@ fun TranslatorScreen(onBack: () -> Unit) {
                         },
                     )
                     PrimaryButton(
-                        if (aiLoading) "Explicando…" else "✨ Explicar con IA",
+                        if (aiLoading) "Explicando…" else ":autoawesome: Explicar con IA",
                         { if (docText.isNotBlank() && !aiLoading) runAi() },
                         containerColor = K.SelvaText,
                     )
                     IconLabel(
                         if (ai.provider == AiClient.Provider.OLLAMA)
-                            "🔒 Con Ollama el texto se procesa en tu propia computadora. Igual ocultamos DNI, celular y correo."
+                            ":lock: Con Ollama el texto se procesa en tu propia computadora. Igual ocultamos DNI, celular y correo."
                         else
-                            "🔒 Antes de enviar a Gemini ocultamos tu DNI, celular y correo. Aun así, no pegues datos que no quieras compartir.",
+                            ":lock: Antes de enviar a Gemini ocultamos tu DNI, celular y correo. Aun así, no pegues datos que no quieras compartir.",
                         fontSize = 11.5.sp, color = K.Muted2, modifier = Modifier.padding(top = 8.dp, bottom = 16.dp),
                     )
                     if (aiLoading) {
@@ -182,10 +185,10 @@ fun TranslatorScreen(onBack: () -> Unit) {
                     aiError?.let { ErrorCard("No se pudo explicar", it, Modifier.padding(bottom = 14.dp)) }
                     aiText?.let { t ->
                         KCard(Modifier.fillMaxWidth().padding(bottom = 12.dp), background = AiBg, borderColor = AiBorder) {
-                            IconLabel("✨ EXPLICACIÓN CON IA", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = K.SelvaText, modifier = Modifier.padding(bottom = 8.dp))
+                            IconLabel(":autoawesome: EXPLICACIÓN CON IA", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = K.SelvaText, modifier = Modifier.padding(bottom = 8.dp))
                             Text(t, fontSize = 14.sp, color = K.Ink, lineHeight = 21.sp)
                         }
-                        SecondaryButton("🔊 Escuchar explicación", { speak(t) })
+                        SecondaryButton(if (speak.isSpeaking) ":stop: Detener explicación" else ":volumeup: Escuchar explicación", { speak(t) })
                         Text(
                             "La IA puede equivocarse. Si tienes dudas, confirma en la entidad o usa \"Pedir ayuda\".",
                             fontSize = 11.5.sp, color = K.Muted2, modifier = Modifier.padding(top = 8.dp),
@@ -215,7 +218,7 @@ fun TranslatorScreen(onBack: () -> Unit) {
 }
 
 @Composable
-private fun LocalResult(r: BureaucracyTranslator.Result, speak: (String) -> Unit) {
+private fun LocalResult(r: BureaucracyTranslator.Result, speak: Speaker) {
     if (r.isEmpty) {
         KCard(Modifier.fillMaxWidth().padding(bottom = 16.dp), background = K.OrangeBg, borderColor = K.OrangeBorder) {
             Text("No reconocimos términos difíciles conocidos", fontWeight = FontWeight.ExtraBold, fontSize = 13.5.sp, color = K.MustardText)
@@ -232,21 +235,21 @@ private fun LocalResult(r: BureaucracyTranslator.Result, speak: (String) -> Unit
     if (r.actions.isNotEmpty() || r.deadlines.isNotEmpty() || r.documents.isNotEmpty()) {
         KCard(Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
             if (r.actions.isNotEmpty()) {
-                IconLabel("✅ Lo que tienes que hacer", fontWeight = FontWeight.ExtraBold, fontSize = 13.5.sp, color = K.Ink, modifier = Modifier.padding(bottom = 4.dp))
+                IconLabel(":checkcircle: Lo que tienes que hacer", fontWeight = FontWeight.ExtraBold, fontSize = 13.5.sp, color = K.Ink, modifier = Modifier.padding(bottom = 4.dp))
                 r.actions.forEach { Text("•  $it", fontSize = 13.sp, color = K.Ink, lineHeight = 19.sp, modifier = Modifier.padding(bottom = 4.dp)) }
             }
             if (r.deadlines.isNotEmpty()) {
-                IconLabel("⏰ Plazo", fontWeight = FontWeight.ExtraBold, fontSize = 13.5.sp, color = K.Ink, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
+                IconLabel(":alarm: Plazo", fontWeight = FontWeight.ExtraBold, fontSize = 13.5.sp, color = K.Ink, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
                 Text(r.deadlines.joinToString(" · "), fontSize = 13.sp, color = K.ErrorTitle, fontWeight = FontWeight.Bold)
             }
             if (r.documents.isNotEmpty()) {
-                IconLabel("📄 Documentos que mencionan", fontWeight = FontWeight.ExtraBold, fontSize = 13.5.sp, color = K.Ink, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
+                IconLabel(":description: Documentos que mencionan", fontWeight = FontWeight.ExtraBold, fontSize = 13.5.sp, color = K.Ink, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
                 Text(r.documents.joinToString(" · "), fontSize = 13.sp, color = K.Ink)
             }
         }
     }
 
-    SecondaryButton("🔊 Escuchar explicación", {
+    SecondaryButton(if (speak.isSpeaking) ":stop: Detener explicación" else ":volumeup: Escuchar explicación", {
         val parts = mutableListOf(r.simplifiedText)
         if (r.deadlines.isNotEmpty()) parts += "Plazo: " + r.deadlines.joinToString(", ")
         speak(parts.joinToString(". "))
@@ -286,7 +289,7 @@ private fun AiSettingsCard(
     KCard(Modifier.fillMaxWidth().padding(bottom = 14.dp), onClick = if (expanded) null else onToggle) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                IconLabel("⚙️ IA: $providerLabel", fontWeight = FontWeight.ExtraBold, fontSize = 13.5.sp, color = K.Ink)
+                IconLabel(":settings: IA: $providerLabel", fontWeight = FontWeight.ExtraBold, fontSize = 13.5.sp, color = K.Ink)
                 if (!expanded) Text("Toca para configurar", fontSize = 12.sp, color = K.Muted)
             }
             if (expanded) GhostButtonSmall("Cerrar", onToggle)

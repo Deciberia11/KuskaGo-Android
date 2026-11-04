@@ -15,7 +15,7 @@ import java.net.URL
  * Proveedores (por defecto se usa Gemini si hay clave; si no, Ollama):
  *  - OLLAMA: IA gratuita que corre en tu computadora (https://ollama.com).
  *    Sin clave, sin internet externo: el texto no sale de tu red.
- *      · Emulador de Android Studio → http://10.0.2.2:11434  (10.0.2.2 = "localhost" de tu PC)
+ *      · Emulador de Android Studio → http://10.0.2.2:11434  (10.0.2.2 = equipo anfitrión)
  *      · Celular real en la misma Wi-Fi → http://IP_DE_TU_PC:11434
  *  - GEMINI (opcional): API de Google con clave gratuita en local.properties (GEMINI_API_KEY).
  *

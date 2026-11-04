@@ -69,14 +69,14 @@ fun ScanDniCard(onResult: (DniData) -> Unit, modifier: Modifier = Modifier) {
     }
 
     KCard(modifier.fillMaxWidth(), background = K.SkyBg, borderColor = K.SkyBorder) {
-        IconLabel("🪪 Completar con mi DNI", fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = K.Ink)
+        IconLabel(":badge: Completar con mi DNI", fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = K.Ink)
         Text(
             if (reading) "Leyendo tu DNI…"
             else "Toma una foto de tu DNI (las dos caras) y llenamos tus datos. La foto no se guarda.",
             fontSize = 12.5.sp, color = K.SkyText, modifier = Modifier.padding(top = 4.dp, bottom = 10.dp),
         )
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            SecondaryButton("📷 Foto del DNI", {
+            SecondaryButton(":photocamera: Foto del DNI", {
                 if (!reading) {
                     val dir = File(context.cacheDir, "dni").apply { mkdirs() }
                     val f = File(dir, "dni_${System.currentTimeMillis()}.jpg")
@@ -86,18 +86,18 @@ fun ScanDniCard(onResult: (DniData) -> Unit, modifier: Modifier = Modifier) {
                     camera.launch(uri)
                 }
             }, Modifier.weight(1f), minHeight = 44.dp, fontSize = 13.sp)
-            SecondaryButton("🖼️ Elegir foto", {
+            SecondaryButton(":image: Elegir foto", {
                 if (!reading) gallery.launch("image/*")
             }, Modifier.weight(1f), minHeight = 44.dp, fontSize = 13.sp)
         }
     }
 }
 
-/** Botón "📍 Usar mi ubicación": completa dirección/distrito con el GPS. */
+/** Botón ":locationon: Usar mi ubicación": completa dirección/distrito con el GPS. */
 @Composable
 fun UseMyLocationButton(
     onResult: (AddressGuess) -> Unit,
-    label: String = "📍 Usar mi ubicación actual",
+    label: String = ":locationon: Usar mi ubicación actual",
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current

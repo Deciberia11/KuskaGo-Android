@@ -61,8 +61,8 @@ private fun styleFor(status: String): StatusStyle = when (status) {
 }
 
 private val ICONS = mapOf(
-    "terreno" to "🏞️", "constancia" to "📜", "dni" to "🪪",
-    "pension65" to "👵", "herencia" to "🏛️", "licencia" to "🏪",
+    "terreno" to ":landscape:", "constancia" to ":historyedu:", "dni" to ":badge:",
+    "pension65" to ":elderly:", "herencia" to ":accountbalance:", "licencia" to ":storefront:",
 )
 
 private fun dateLabel(ms: Long): String =
@@ -112,7 +112,7 @@ fun MyTramitesScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
-                            KIcon("🗂️", size = 46.dp, tint = K.Green)
+                            KIcon(":factcheck:", size = 46.dp, tint = K.Green)
                             Text("Aún no tienes trámites", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = K.Ink)
                             Text(
                                 "Cuando completes un formulario, tu trámite aparecerá aquí para que sigas su avance.",
@@ -131,7 +131,7 @@ fun MyTramitesScreen(
                                     androidx.compose.foundation.layout.Box(
                                         Modifier.size(44.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).background(K.Menta),
                                         contentAlignment = Alignment.Center,
-                                    ) { KIcon(ICONS[t.type] ?: "📄", size = 26.dp, tint = K.Verde) }
+                                    ) { KIcon(ICONS[t.type] ?: ":description:", size = 26.dp, tint = K.Verde) }
                                     Column(Modifier.weight(1f)) {
                                         Text(t.title, fontWeight = FontWeight.ExtraBold, fontSize = 14.5.sp, color = K.Ink)
                                         Text("${t.entity} · ${dateLabel(t.updated)}", fontSize = 12.sp, color = K.Muted)
@@ -157,7 +157,7 @@ fun MyTramitesScreen(
                     Text("Avance: ${open.progress}%", fontSize = 12.sp, color = K.Muted2, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 16.dp))
 
                     KCard(Modifier.fillMaxWidth().padding(bottom = 16.dp), background = K.GreenSoft, borderColor = K.GreenSoftBorder) {
-                        IconLabel("👉 Lo que sigue", fontWeight = FontWeight.ExtraBold, fontSize = 13.5.sp, color = K.Ink, modifier = Modifier.padding(bottom = 4.dp))
+                        IconLabel(":arrowforward: Lo que sigue", fontWeight = FontWeight.ExtraBold, fontSize = 13.5.sp, color = K.Ink, modifier = Modifier.padding(bottom = 4.dp))
                         Text(nextStep(open), fontSize = 13.5.sp, color = K.Ink, lineHeight = 20.sp)
                     }
 
@@ -174,7 +174,7 @@ fun MyTramitesScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            StepDot(if (ok) "✓" else "${i + 1}", if (ok) 2 else if (i == currentIdx) 1 else 0)
+                            StepDot(if (ok) ":check:" else "${i + 1}", if (ok) 2 else if (i == currentIdx) 1 else 0)
                             Text(label, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if (ok) K.Ink else K.Muted)
                         }
                     }
@@ -185,19 +185,19 @@ fun MyTramitesScreen(
                             KuskaStore.STATUS_IN_PROGRESS ->
                                 PrimaryButton("Continuar trámite", { go(Route.TramiteDetail) })
                             KuskaStore.STATUS_GENERATED ->
-                                PrimaryButton("✓ Ya lo presenté", { store.setTramiteStatus(open.id, KuskaStore.STATUS_SUBMITTED); refresh() })
+                                PrimaryButton(":check: Ya lo presenté", { store.setTramiteStatus(open.id, KuskaStore.STATUS_SUBMITTED); refresh() })
                             KuskaStore.STATUS_SUBMITTED ->
-                                PrimaryButton("✓ Ya recibí la respuesta", { store.setTramiteStatus(open.id, KuskaStore.STATUS_DONE); refresh() })
+                                PrimaryButton(":check: Ya recibí la respuesta", { store.setTramiteStatus(open.id, KuskaStore.STATUS_DONE); refresh() })
                             else -> {}
                         }
                         if (open.documentName.isNotBlank()) {
-                            SecondaryButton("📄 Ver mi documento", { go(Route.Documents) })
+                            SecondaryButton(":description: Ver mi documento", { go(Route.Documents) })
                         }
                         if (open.type == "terreno" || open.type == "constancia") {
-                            SecondaryButton("🧭 Ver Ruta Ciudadana", { go(Route.CitizenRoute) })
+                            SecondaryButton(":explore: Ver Ruta Ciudadana", { go(Route.CitizenRoute) })
                         }
                         if (open.status != KuskaStore.STATUS_IN_PROGRESS) {
-                            SecondaryButton("📝 Llenar otra solicitud igual", { onOpenWizard(open.type) })
+                            SecondaryButton(":editnote: Llenar otra solicitud igual", { onOpenWizard(open.type) })
                         }
                         SecondaryButton("Eliminar de mi lista", { confirmDelete = true }, contentColor = K.ErrorTitle, borderColor = K.ErrorBorder)
                     }

@@ -15,11 +15,13 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -45,11 +47,11 @@ import pe.kuskago.app.ui.theme.textScale
 /** Las seis opciones de accesibilidad del prototipo. */
 private enum class PrefKey(val icon: String, val title: String, val shortTitle: String, val desc: String) {
     BIG("Aa", "Texto grande", "Texto grande", "Letras más grandes"),
-    LISTEN("🔊", "Prefiero escuchar", "Prefiero escuchar", "Audio en cada paso"),
-    GUIDED("➜", "Necesito ayuda paso a paso", "Ayuda paso a paso", "Modo guiado y sencillo"),
-    CONTRAST("◑", "Alto contraste", "Alto contraste", "Colores más visibles"),
-    SIMPLE("💬", "Lenguaje sencillo", "Lenguaje sencillo", "Palabras fáciles de entender"),
-    TRANSLATE("🌐", "Traducir automáticamente", "Traductor automático", "Explica términos difíciles"),
+    LISTEN(":volumeup:", "Prefiero escuchar", "Prefiero escuchar", "Audio en cada paso"),
+    GUIDED(":arrowforward:", "Necesito ayuda paso a paso", "Ayuda paso a paso", "Modo guiado y sencillo"),
+    CONTRAST(":contrast:", "Alto contraste", "Alto contraste", "Colores más visibles"),
+    SIMPLE(":chat:", "Lenguaje sencillo", "Lenguaje sencillo", "Palabras fáciles de entender"),
+    TRANSLATE(":translate:", "Traducir automáticamente", "Traductor automático", "Explica términos difíciles"),
 }
 
 private fun AccessPrefs.get(k: PrefKey) = when (k) {
@@ -68,6 +70,28 @@ private fun AccessPrefs.toggle(k: PrefKey) = when (k) {
     PrefKey.CONTRAST -> copy(contrast = !contrast)
     PrefKey.SIMPLE -> copy(simple = !simple)
     PrefKey.TRANSLATE -> copy(translate = !translate)
+}
+
+@Composable
+private fun HomeModeSelector(simple: Boolean, onSelect: (Boolean) -> Unit) {
+    Text("Modo de inicio", fontWeight = FontWeight.ExtraBold, color = K.Ink,
+        modifier = Modifier.padding(bottom = 10.dp))
+    listOf(false to "Modo normal", true to "Modo sencillo").forEach { (value, title) ->
+        CheckboxCard(
+            checked = simple == value,
+            onClick = { onSelect(value) },
+            role = Role.RadioButton,
+            modifier = Modifier.padding(bottom = 10.dp),
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(title, fontWeight = FontWeight.Bold, color = K.Ink)
+                Text(if (value) "Botones grandes y menos opciones" else "Todas las herramientas de KuskaGo",
+                    fontSize = 12.sp, color = K.Muted)
+            }
+        }
+    }
+    Text("Se mostrará únicamente la guía del modo seleccionado.", fontSize = 12.sp,
+        color = K.Muted, modifier = Modifier.padding(bottom = 16.dp))
 }
 
 // =============================================================
@@ -91,6 +115,7 @@ fun PreferencesScreen(
     val btnScale = p.buttonScale()
     fun px(base: Float): TextUnit = (base * scale).sp
     val speak = rememberSpeaker()
+    LaunchedEffect(p.listen) { if (!p.listen) speak.stop() }
 
     val preview = if (p.simple) {
         "Sube los documentos que necesitas para continuar."
@@ -113,7 +138,8 @@ fun PreferencesScreen(
                 color = K.Muted,
                 modifier = Modifier.padding(bottom = 16.dp),
             )
-            PrefKey.entries.forEach { key ->
+            HomeModeSelector(p.guided) { save(p.copy(guided = it)) }
+            PrefKey.entries.filter { it != PrefKey.GUIDED }.forEach { key ->
                 CheckboxCard(
                     checked = p.get(key),
                     onClick = { save(p.toggle(key)) },
@@ -166,7 +192,7 @@ fun PreferencesScreen(
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = K.Green, contentColor = K.White),
                     ) {
-                        IconLabel("🔊 Escuchar explicación", fontWeight = FontWeight.ExtraBold, fontSize = (14.5f * btnScale).sp)
+                        IconLabel(if (speak.isSpeaking) ":stop: Detener explicación" else ":volumeup: Escuchar explicación", fontWeight = FontWeight.ExtraBold, fontSize = (14.5f * btnScale).sp)
                     }
                 }
                 if (p.translate) {
@@ -199,7 +225,7 @@ fun PreferencesScreen(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
             )
-            GhostButton("Configurar después", onSkip, fontSize = (13.5f * btnScale).sp)
+            GhostButton("Configurar después", { save(p.copy(guided = false)); onSkip() }, fontSize = (13.5f * btnScale).sp)
         }
     }
 }
@@ -231,7 +257,8 @@ fun AccessibilityScreen(store: KuskaStore, onBack: () -> Unit) {
                 color = K.Muted,
                 modifier = Modifier.padding(bottom = 16.dp),
             )
-            PrefKey.entries.forEach { key ->
+            HomeModeSelector(p.guided) { save(p.copy(guided = it)) }
+            PrefKey.entries.filter { it != PrefKey.GUIDED }.forEach { key ->
                 CheckboxCard(
                     checked = p.get(key),
                     onClick = { save(p.toggle(key)) },

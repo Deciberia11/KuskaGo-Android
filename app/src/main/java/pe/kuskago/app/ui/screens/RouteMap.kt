@@ -73,10 +73,10 @@ fun RouteMapSection(store: KuskaStore) {
     val district = remember { store.getProfile().place.ifBlank { "Puno" } }
     val targets = remember(district) {
         listOf(
-            MapTarget("Municipalidad", "🏛️", "Municipalidad $district", "Constancia de posesión"),
-            MapTarget("Banco de la Nación", "🏦", "Banco de la Nación $district", "Pago de tasas"),
-            MapTarget("COFOPRI", "📋", "COFOPRI $district", "Registrar tu terreno"),
-            MapTarget("RENIEC", "🪪", "RENIEC $district", "DNI y actas"),
+            MapTarget("Municipalidad", ":accountbalance:", "Municipalidad $district", "Constancia de posesión"),
+            MapTarget("Banco de la Nación", ":savings:", "Banco de la Nación $district", "Pago de tasas"),
+            MapTarget("COFOPRI", ":assignment:", "COFOPRI $district", "Registrar tu terreno"),
+            MapTarget("RENIEC", ":badge:", "RENIEC $district", "DNI y actas"),
         )
     }
 
@@ -138,12 +138,12 @@ fun RouteMapSection(store: KuskaStore) {
                 .padding(horizontal = 20.dp),
         ) {
             if (!showMyLocation) {
-                SecondaryButton("📍 Usar mi ubicación", {
+                SecondaryButton(":locationon: Usar mi ubicación", {
                     permission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
                 }, minHeight = 44.dp, fontSize = 14.sp)
                 Spacer(Modifier.height(12.dp))
             } else if (myLocation != null) {
-                SecondaryButton("📍 Ir a mi ubicación", { focus = myLocation }, minHeight = 44.dp, fontSize = 14.sp)
+                SecondaryButton(":locationon: Ir a mi ubicación", { focus = myLocation }, minHeight = 44.dp, fontSize = 14.sp)
                 Spacer(Modifier.height(12.dp))
             }
 

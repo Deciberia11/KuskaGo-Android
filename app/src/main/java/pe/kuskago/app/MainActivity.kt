@@ -19,6 +19,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
+import pe.kuskago.app.ui.components.HomeTutorial
+import pe.kuskago.app.data.AccessPrefs
 import pe.kuskago.app.data.KuskaStore
 import pe.kuskago.app.ui.screens.AccessibilityScreen
 import pe.kuskago.app.ui.screens.AlertsScreen
@@ -125,9 +127,17 @@ fun KuskaGoApp() {
     var detailTab by rememberSaveable { mutableStateOf("resumen") }
     var profileUpdated by rememberSaveable { mutableStateOf(false) }
 
+    fun selectedHome(): Route = if (store.currentUser()?.dni?.let { store.getPrefs(it) }?.guided == true) Route.HomeSimple else Route.Home
+    fun selectNormalMode() {
+        store.currentUser()?.dni?.let { dni ->
+            store.savePrefs(dni, (store.getPrefs(dni) ?: AccessPrefs()).copy(guided = false))
+        }
+        nav.reset(Route.Home)
+    }
+    val currentRoute = if (nav.current == Route.Home || nav.current == Route.HomeSimple) selectedHome() else nav.current
     val go: (Route) -> Unit = { r ->
         if (r == Route.TramiteDetail) detailTab = "resumen"
-        nav.go(r)
+        nav.go(if (r == Route.Home || r == Route.HomeSimple) selectedHome() else r)
     }
     val openEntity: () -> Unit = { detailTab = "entidad"; nav.go(Route.TramiteDetail) }
     val openWizard: (String) -> Unit = { t -> wizardType = t; nav.go(Route.TramiteWizard) }
@@ -144,7 +154,7 @@ fun KuskaGoApp() {
     }
     val baseDensity = LocalDensity.current
 
-    Crossfade(targetState = nav.current, label = "pantalla") { route ->
+    Crossfade(targetState = currentRoute, label = "pantalla") { route ->
         // Preferencias y Accesibilidad ya muestran su propia vista previa del tamaño.
         val scale = if (route == Route.Preferences || route == Route.Accessibility) 1f else appTextScale
         CompositionLocalProvider(
@@ -179,16 +189,19 @@ fun KuskaGoApp() {
             Route.Preferences -> PreferencesScreen(
                 store = store,
                 onBack = { nav.go(Route.Login) },
-                onContinue = { guided -> nav.go(if (guided) Route.HomeSimple else Route.Home) },
-                onSkip = { nav.go(Route.Home) },
+                onContinue = { _ -> nav.reset(selectedHome()) },
+                onSkip = { selectNormalMode() },
             )
 
-            Route.Home -> HomeScreen(store = store, go = go)
+            Route.Home -> HomeTutorial(store, simple = false, active = route == currentRoute && selectedHome() == Route.Home) { target ->
+                HomeScreen(store = store, go = go, target = target)
+            }
 
-            Route.HomeSimple -> HomeSimpleScreen(
+            Route.HomeSimple -> HomeTutorial(store, simple = true, active = route == currentRoute && selectedHome() == Route.HomeSimple) { target -> HomeSimpleScreen(
+                target = target,
                 go = go,
-                onNormalMode = { nav.replace(Route.Home) },
-            )
+                onNormalMode = { selectNormalMode() },
+            ) }
 
             Route.Search -> SearchScreen(
                 onBack = { nav.back() },

@@ -9,15 +9,15 @@ Versión nativa del prototipo web de KuskaGo. Reproduce las mismas pantallas, co
 3. Espera a que termine la sincronización de Gradle (la primera vez descarga dependencias, necesita internet).
 4. Elige un emulador o tu celular y pulsa **Run ▶**.
 
-Requisitos: Android Studio Ladybug o más reciente, JDK 17 (viene con Android Studio). La app funciona desde Android 8.0 (API 26).
-Si Android Studio sugiere actualizar el plugin de Android Gradle, puedes aceptar.
+Requisitos: Android Studio con soporte para este proyecto y JDK 17 o 21. En la configuración de Gradle se comprobó Java 21. La app funciona desde Android 8.0 (API 26).
+Utiliza las versiones de Gradle y de sus plugins incluidas en el proyecto. Abre la carpeta que contiene `settings.gradle.kts`.
 
 ## Cuenta de prueba
 
 - **DNI:** `12345678` con cualquier contraseña → entra como *Juan Quispe*.
 - También puedes crear tu propia cuenta en "Crear cuenta nueva"; se guarda en el teléfono.
 
-## Pantallas incluidas (las 22 del prototipo de alta fidelidad)
+## Pantallas incluidas
 
 **Ingreso:** Bienvenida · Iniciar sesión · Crear cuenta · Recuperar contraseña · Preferencias (texto grande 1–5, voz, paso a paso, alto contraste, lenguaje sencillo, traductor).
 
@@ -36,7 +36,7 @@ Si Android Studio sugiere actualizar el plugin de Android Gradle, puedes aceptar
 - Pedir ayuda: tema → canal → respuesta que lleva a la pantalla adecuada.
 - Ruta Ciudadana: pasos que se marcan como completados (se guardan), explicación de cada paso y **mapa real (OpenStreetMap)** con los puntos de atención de tu distrito, tu ubicación, distancia y "Cómo llegar" (abre Google Maps).
 - KuskaAlert: avisos **generados desde Mis trámites** (documento listo, recordatorio si no lo presentas en 3 días, esperando respuesta) + filtros Todas / Importantes / Urgentes. El número de la campana en Inicio es real.
-- Perfil y Editar datos (nombre, celular y distrito se guardan).
+- Perfil y Editar datos: nombre, celular, distrito y foto de perfil. La foto se elige desde el teléfono y se guarda para esa cuenta.
 - Flujo completo en modo sencillo con botones grandes y voz.
 
 ## Estructura
@@ -187,7 +187,7 @@ En producción se usarían funciones `suspend` con corrutinas.
 
 ## Diferencias con la versión web
 
-- Las contraseñas se guardan cifradas con hash SHA-256 (la versión web las guardaba en texto plano).
+- Las contraseñas se guardan como hash SHA-256 (la versión web las guardaba en texto plano).
 - "Recuperar contraseña" sí actualiza la contraseña si la cuenta existe y ambas contraseñas coinciden.
 - "Escuchar explicación" usa el motor de Texto a Voz del teléfono en español.
 
@@ -215,3 +215,29 @@ los documentos guardados en versiones anteriores.
 Otras mejoras: etiquetas en Avisos y Perfil, estado seleccionado accesible en la
 navegación, limpieza de búsquedas y restricciones para datos incompletos.
 La recuperación por SMS/correo sigue siendo una simulación del prototipo.
+
+
+## Foto de perfil
+
+En Perfil > Editar datos > Cambiar foto de perfil se puede elegir una imagen del
+teléfono. La foto se guarda al seleccionarla y se muestra en Inicio y Perfil. Se
+conserva una copia reducida en el almacenamiento privado de la aplicación, asociada
+a la cuenta. Si la selección se cancela o la imagen no se puede leer, se conserva
+la foto anterior.
+
+## Control de lectura por voz
+
+Al reproducir una explicación, el botón cambia a Detener explicación. Una nueva
+pulsación detiene la lectura; Escuchar explicación la inicia desde el principio.
+El control se aplica al Traductor, la vista previa de Preferencias y el flujo
+sencillo. También se detiene al salir de la pantalla, cambiar de paso o poner la
+aplicación en segundo plano.
+
+## Mejoras de la interfaz
+
+- Tutorial del modo elegido, con controles Anterior, Siguiente y Entendido.
+- Mensajes breves sin desplazamiento dentro del recuadro del tutorial.
+- Explicaciones de Buscar trámite, Mis trámites, Mis documentos, Mi familia,
+  Ruta Ciudadana, KuskaAlert, Pedir ayuda, Traductor, Avisos y Perfil.
+- Los cuatro botones principales de Inicio comparten ancho y altura.
+- Etiquetas visibles en Avisos y Perfil y monograma K ampliado en la bienvenida.

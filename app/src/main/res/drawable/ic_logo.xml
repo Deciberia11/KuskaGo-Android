@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Logo dentro de la app: el mismo monograma "K" sobre un cuadrado azul redondeado -->
+<!-- Logo dentro de la app: el mismo monograma "K" sobre un cuadrado verde redondeado -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="26dp" android:height="26dp"
     android:viewportWidth="30" android:viewportHeight="30">

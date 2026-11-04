@@ -49,6 +49,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -134,8 +135,10 @@ fun PrimaryButton(
     containerColor: Color = K.Green,
     fontSize: TextUnit = 16.sp,
     minHeight: Dp = 56.dp,
+    enabled: Boolean = true,
 ) {
     Button(
+        enabled = enabled,
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
@@ -212,7 +215,7 @@ fun ErrorCard(title: String, body: String, modifier: Modifier = Modifier) {
         borderColor = K.ErrorBorder,
     ) {
         IconLabel(
-            "⚠ $title",
+            ":warningamber: $title",
             fontWeight = FontWeight.ExtraBold,
             fontSize = 13.5.sp,
             color = K.ErrorTitle,
@@ -279,7 +282,7 @@ fun KTextField(
                         contentDescription = if (visible) "Ocultar contraseña" else "Mostrar contraseña"
                     },
                 ) {
-                    KIcon(if (visible) "🙈" else "👁", size = 22.dp, tint = K.Muted)
+                    KIcon(if (visible) ":visibilityoff:" else ":visibility:", size = 22.dp, tint = K.Muted)
                 }
             }
         } else {
@@ -434,6 +437,7 @@ fun BottomNav(items: List<NavEntry>) {
                     modifier = Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(10.dp))
+                        .semantics { selected = item.active }
                         .clickable(role = Role.Tab, onClick = item.onClick)
                         .padding(vertical = 4.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -464,7 +468,8 @@ fun BottomNav(items: List<NavEntry>) {
 
 /** Botón cuadrado blanco con icono (campana, perfil) y contador opcional. */
 @Composable
-fun IconBox(icon: String, description: String, onClick: () -> Unit, badge: String? = null) {
+fun IconBox(icon: String, description: String, onClick: () -> Unit, badge: String? = null, labelColor: Color = K.Ink) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
     Box {
         val shape = RoundedCornerShape(12.dp)
         Box(
@@ -495,6 +500,8 @@ fun IconBox(icon: String, description: String, onClick: () -> Unit, badge: Strin
                 Text(badge, color = K.White, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
             }
         }
+    }
+    Text(description, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = labelColor, modifier = Modifier.padding(top = 4.dp))
     }
 }
 

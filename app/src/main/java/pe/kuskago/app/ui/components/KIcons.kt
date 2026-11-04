@@ -51,6 +51,7 @@ import androidx.compose.material.icons.rounded.Savings
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Smartphone
+import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.Storefront
 import androidx.compose.material.icons.rounded.SupportAgent
 import androidx.compose.material.icons.rounded.ThumbUp
@@ -79,100 +80,155 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/*
- * Iconografía de KuskaGo: Material Icons de Google, estilo Rounded (el estándar de las apps Android),
- * en lugar de emojis. En la barra inferior se sigue la convención de Material 3: ícono relleno en la
- * sección activa y de contorno en las demás.
- * Los emojis se siguen usando como "clave" en los datos (por ejemplo, los documentos guardados
- * en la base de datos tienen "📄"), pero en pantalla siempre se dibuja el ícono de Material:
- * se ve igual en todos los celulares, toma el color del tema y TalkBack no lee "emoji de…".
- */
+/** Iconos Material identificados por claves descriptivas. */
 private val ICONS: Map<String, ImageVector> = mapOf(
-    "🏠" to Icons.Rounded.Home,
-    "📋" to Icons.Rounded.Assignment,
-    "🔔" to Icons.Rounded.Notifications,
-    "👤" to Icons.Rounded.Person,
-    "🧑" to Icons.Rounded.Person,
-    "🔍" to Icons.Rounded.Search,
-    "📄" to Icons.Rounded.Description,
-    "🗂" to Icons.Rounded.FactCheck,
-    "📁" to Icons.Rounded.Folder,
-    "👨‍👩‍👧" to Icons.Rounded.FamilyRestroom,
-    "🧭" to Icons.Rounded.Explore,
-    "🗣" to Icons.Rounded.RecordVoiceOver,
-    "🚌" to Icons.Rounded.DirectionsBus,
-    "🙋" to Icons.Rounded.SupportAgent,
-    "🆘" to Icons.Rounded.SupportAgent,
-    "⌨" to Icons.Rounded.Keyboard,
-    "🏞" to Icons.Rounded.Landscape,
-    "📜" to Icons.Rounded.HistoryEdu,
-    "🪪" to Icons.Rounded.Badge,
-    "👵" to Icons.Rounded.Elderly,
-    "👴" to Icons.Rounded.Elderly,
-    "👦" to Icons.Rounded.Face,
-    "👧" to Icons.Rounded.Face,
-    "💑" to Icons.Rounded.Favorite,
-    "🏛" to Icons.Rounded.AccountBalance,
-    "🏦" to Icons.Rounded.Savings,
-    "🏪" to Icons.Rounded.Storefront,
-    "📍" to Icons.Rounded.LocationOn,
-    "🗺" to Icons.Rounded.Map,
-    "📷" to Icons.Rounded.PhotoCamera,
-    "🖼" to Icons.Rounded.Image,
-    "📝" to Icons.Rounded.EditNote,
-    "✏" to Icons.Rounded.Edit,
-    "📎" to Icons.Rounded.AttachFile,
-    "❓" to Icons.Rounded.HelpOutline,
-    "⚠" to Icons.Rounded.WarningAmber,
-    "💬" to Icons.Rounded.Chat,
-    "🎙" to Icons.Rounded.Mic,
-    "🔊" to Icons.Rounded.VolumeUp,
-    "⚙" to Icons.Rounded.Settings,
-    "👍" to Icons.Rounded.ThumbUp,
-    "🎉" to Icons.Rounded.Celebration,
-    "➜" to Icons.Rounded.ArrowForward,
-    "👉" to Icons.Rounded.ArrowForward,
-    "←" to Icons.Rounded.ArrowBack,
-    "🌐" to Icons.Rounded.Translate,
-    "✨" to Icons.Rounded.AutoAwesome,
-    "🔒" to Icons.Rounded.Lock,
-    "✅" to Icons.Rounded.CheckCircle,
-    "✓" to Icons.Rounded.Check,
-    "⏰" to Icons.Rounded.Alarm,
-    "💾" to Icons.Rounded.Save,
-    "🖨" to Icons.Rounded.Print,
-    "🧾" to Icons.Rounded.ReceiptLong,
-    "📱" to Icons.Rounded.Smartphone,
-    "✉" to Icons.Rounded.Email,
-    "📞" to Icons.Rounded.Phone,
-    "◑" to Icons.Rounded.Contrast,
-    "👁" to Icons.Rounded.Visibility,
-    "🙈" to Icons.Rounded.VisibilityOff,
+    ":stop:" to Icons.Rounded.Stop,
+    ":home:" to Icons.Rounded.Home,
+    ":assignment:" to Icons.Rounded.Assignment,
+    ":notifications:" to Icons.Rounded.Notifications,
+    ":person:" to Icons.Rounded.Person,
+    ":search:" to Icons.Rounded.Search,
+    ":description:" to Icons.Rounded.Description,
+    ":factcheck:" to Icons.Rounded.FactCheck,
+    ":folder:" to Icons.Rounded.Folder,
+    ":familyrestroom:" to Icons.Rounded.FamilyRestroom,
+    ":explore:" to Icons.Rounded.Explore,
+    ":recordvoiceover:" to Icons.Rounded.RecordVoiceOver,
+    ":directionsbus:" to Icons.Rounded.DirectionsBus,
+    ":supportagent:" to Icons.Rounded.SupportAgent,
+    ":keyboard:" to Icons.Rounded.Keyboard,
+    ":landscape:" to Icons.Rounded.Landscape,
+    ":historyedu:" to Icons.Rounded.HistoryEdu,
+    ":badge:" to Icons.Rounded.Badge,
+    ":elderly:" to Icons.Rounded.Elderly,
+    ":face:" to Icons.Rounded.Face,
+    ":favorite:" to Icons.Rounded.Favorite,
+    ":accountbalance:" to Icons.Rounded.AccountBalance,
+    ":savings:" to Icons.Rounded.Savings,
+    ":storefront:" to Icons.Rounded.Storefront,
+    ":locationon:" to Icons.Rounded.LocationOn,
+    ":map:" to Icons.Rounded.Map,
+    ":photocamera:" to Icons.Rounded.PhotoCamera,
+    ":image:" to Icons.Rounded.Image,
+    ":editnote:" to Icons.Rounded.EditNote,
+    ":edit:" to Icons.Rounded.Edit,
+    ":attachfile:" to Icons.Rounded.AttachFile,
+    ":helpoutline:" to Icons.Rounded.HelpOutline,
+    ":warningamber:" to Icons.Rounded.WarningAmber,
+    ":chat:" to Icons.Rounded.Chat,
+    ":mic:" to Icons.Rounded.Mic,
+    ":volumeup:" to Icons.Rounded.VolumeUp,
+    ":settings:" to Icons.Rounded.Settings,
+    ":thumbup:" to Icons.Rounded.ThumbUp,
+    ":celebration:" to Icons.Rounded.Celebration,
+    ":arrowforward:" to Icons.Rounded.ArrowForward,
+    ":arrowback:" to Icons.Rounded.ArrowBack,
+    ":translate:" to Icons.Rounded.Translate,
+    ":autoawesome:" to Icons.Rounded.AutoAwesome,
+    ":lock:" to Icons.Rounded.Lock,
+    ":checkcircle:" to Icons.Rounded.CheckCircle,
+    ":check:" to Icons.Rounded.Check,
+    ":alarm:" to Icons.Rounded.Alarm,
+    ":save:" to Icons.Rounded.Save,
+    ":print:" to Icons.Rounded.Print,
+    ":receiptlong:" to Icons.Rounded.ReceiptLong,
+    ":smartphone:" to Icons.Rounded.Smartphone,
+    ":email:" to Icons.Rounded.Email,
+    ":phone:" to Icons.Rounded.Phone,
+    ":contrast:" to Icons.Rounded.Contrast,
+    ":visibility:" to Icons.Rounded.Visibility,
+    ":visibilityoff:" to Icons.Rounded.VisibilityOff,
+)
+
+private val LEGACY_ICON_KEYS = mapOf(
+    "\uD83C\uDFE0" to ":home:",
+    "\uD83D\uDCCB" to ":assignment:",
+    "\uD83D\uDD14" to ":notifications:",
+    "\uD83D\uDC64" to ":person:",
+    "\uD83E\uDDD1" to ":person:",
+    "\uD83D\uDD0D" to ":search:",
+    "\uD83D\uDCC4" to ":description:",
+    "\uD83D\uDDC2" to ":factcheck:",
+    "\uD83D\uDCC1" to ":folder:",
+    "\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67" to ":familyrestroom:",
+    "\uD83E\uDDED" to ":explore:",
+    "\uD83D\uDDE3" to ":recordvoiceover:",
+    "\uD83D\uDE8C" to ":directionsbus:",
+    "\uD83D\uDE4B" to ":supportagent:",
+    "\uD83C\uDD98" to ":supportagent:",
+    "\u2328" to ":keyboard:",
+    "\uD83C\uDFDE" to ":landscape:",
+    "\uD83D\uDCDC" to ":historyedu:",
+    "\uD83E\uDEAA" to ":badge:",
+    "\uD83D\uDC75" to ":elderly:",
+    "\uD83D\uDC74" to ":elderly:",
+    "\uD83D\uDC66" to ":face:",
+    "\uD83D\uDC67" to ":face:",
+    "\uD83D\uDC91" to ":favorite:",
+    "\uD83C\uDFDB" to ":accountbalance:",
+    "\uD83C\uDFE6" to ":savings:",
+    "\uD83C\uDFEA" to ":storefront:",
+    "\uD83D\uDCCD" to ":locationon:",
+    "\uD83D\uDDFA" to ":map:",
+    "\uD83D\uDCF7" to ":photocamera:",
+    "\uD83D\uDDBC" to ":image:",
+    "\uD83D\uDCDD" to ":editnote:",
+    "\u270F" to ":edit:",
+    "\uD83D\uDCCE" to ":attachfile:",
+    "\u2753" to ":helpoutline:",
+    "\u26A0" to ":warningamber:",
+    "\uD83D\uDCAC" to ":chat:",
+    "\uD83C\uDF99" to ":mic:",
+    "\uD83D\uDD0A" to ":volumeup:",
+    "\u2699" to ":settings:",
+    "\uD83D\uDC4D" to ":thumbup:",
+    "\uD83C\uDF89" to ":celebration:",
+    "\u279C" to ":arrowforward:",
+    "\uD83D\uDC49" to ":arrowforward:",
+    "\u2190" to ":arrowback:",
+    "\uD83C\uDF10" to ":translate:",
+    "\u2728" to ":autoawesome:",
+    "\uD83D\uDD12" to ":lock:",
+    "\u2705" to ":checkcircle:",
+    "\u2713" to ":check:",
+    "\u23F0" to ":alarm:",
+    "\uD83D\uDCBE" to ":save:",
+    "\uD83D\uDDA8" to ":print:",
+    "\uD83E\uDDFE" to ":receiptlong:",
+    "\uD83D\uDCF1" to ":smartphone:",
+    "\u2709" to ":email:",
+    "\uD83D\uDCDE" to ":phone:",
+    "\u25D1" to ":contrast:",
+    "\uD83D\uDC41" to ":visibility:",
+    "\uD83D\uDE48" to ":visibilityoff:",
 )
 
 /** Íconos de la barra inferior: relleno si está activo, contorno si no (convención de Material 3). */
-fun navIcon(key: String, active: Boolean): ImageVector? = if (active) iconFor(key) else when (key.replace("\uFE0F", "").trim()) {
-    "🏠" -> androidx.compose.material.icons.Icons.Outlined.Home
-    "📋" -> androidx.compose.material.icons.Icons.Outlined.Assignment
-    "🔔" -> androidx.compose.material.icons.Icons.Outlined.Notifications
-    "👤" -> androidx.compose.material.icons.Icons.Outlined.Person
+fun navIcon(key: String, active: Boolean): ImageVector? = if (active) iconFor(key) else when (clean(key)) {
+    ":home:" -> androidx.compose.material.icons.Icons.Outlined.Home
+    ":assignment:" -> androidx.compose.material.icons.Icons.Outlined.Assignment
+    ":notifications:" -> androidx.compose.material.icons.Icons.Outlined.Notifications
+    ":person:" -> androidx.compose.material.icons.Icons.Outlined.Person
     else -> iconFor(key)
 }
 
-/** Quita el selector de variación (U+FE0F) que traen algunos emojis, p. ej. "🗂️" → "🗂". */
-private fun clean(s: String) = s.replace("️", "").trim()
+/** Normaliza las claves almacenadas por versiones anteriores. */
+private fun clean(s: String): String {
+    val key = s.replace("\uFE0F", "").trim()
+    return LEGACY_ICON_KEYS[key] ?: key
+}
 
-/** Ícono de Material para un emoji/clave, o null si no hay equivalente. */
+/** Ícono de Material para una clave descriptiva, o null si no hay equivalente. */
 fun iconFor(key: String?): ImageVector? = key?.let { ICONS[clean(it)] }
 
 /**
- * Separa un ícono al inicio del texto: "📍 Usar mi ubicación" → (LocationOn, "Usar mi ubicación").
+ * Separa un ícono al inicio del texto: ":locationon: Usar mi ubicación" → (LocationOn, "Usar mi ubicación").
  * Si el texto no empieza con un ícono conocido, devuelve (null, texto).
  */
 fun splitIcon(text: String): Pair<ImageVector?, String> {
     val t = text.trimStart()
     val sp = t.indexOf(' ')
-    if (sp <= 0 || sp > 12) return null to text
+    if (sp <= 0 || sp > 64) return null to text
     val icon = iconFor(t.substring(0, sp)) ?: return null to text
     return icon to t.substring(sp).trim()
 }
@@ -196,7 +252,7 @@ fun KIcon(
 
 /**
  * Texto con ícono opcional al inicio. Acepta los mismos parámetros que Text, así que
- * Text("📍 Usar mi ubicación", …) se reemplaza por IconLabel("📍 Usar mi ubicación", …)
+ * Text(":locationon: Usar mi ubicación", …) se reemplaza por IconLabel(":locationon: Usar mi ubicación", …)
  * y en pantalla aparece el ícono de ubicación de Material seguido del texto.
  */
 @Composable

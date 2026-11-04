@@ -55,10 +55,10 @@ import java.util.Locale
 fun MainBottomNav(active: Route?, go: (Route) -> Unit) {
     BottomNav(
         listOf(
-            NavEntry("🏠", "Inicio", active == Route.Home) { go(Route.Home) },
-            NavEntry("📋", "Trámites", active == Route.Search) { go(Route.Search) },
-            NavEntry("🔔", "Avisos", active == Route.Alerts) { go(Route.Alerts) },
-            NavEntry("👤", "Perfil", active == Route.Profile) { go(Route.Profile) },
+            NavEntry(":home:", "Inicio", active == Route.Home) { go(Route.Home) },
+            NavEntry(":assignment:", "Trámites", active == Route.Search) { go(Route.Search) },
+            NavEntry(":notifications:", "Avisos", active == Route.Alerts) { go(Route.Alerts) },
+            NavEntry(":person:", "Perfil", active == Route.Profile) { go(Route.Profile) },
         )
     )
 }
@@ -211,29 +211,6 @@ fun StepDot(mark: String, state: Int, size: Dp = 30.dp) {
 // =============================================================
 // Voz (Texto a Voz en español)
 // =============================================================
-@Composable
-fun rememberSpeaker(): (String) -> Unit {
-    val context = LocalContext.current
-    val tts = remember { TextToSpeech(context.applicationContext) { } }
-    DisposableEffect(Unit) {
-        onDispose {
-            tts.stop()
-            tts.shutdown()
-        }
-    }
-    val speak: (String) -> Unit = remember {
-        { text: String ->
-            val r = tts.setLanguage(Locale.forLanguageTag("es-PE"))
-            if (r == TextToSpeech.LANG_MISSING_DATA || r == TextToSpeech.LANG_NOT_SUPPORTED) {
-                tts.setLanguage(Locale.forLanguageTag("es"))
-            }
-            tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "kuskago")
-            Unit
-        }
-    }
-    return speak
-}
-
 // =============================================================
 // Utilidades: avisos, enlaces, compartir, imprimir/guardar PDF
 // =============================================================

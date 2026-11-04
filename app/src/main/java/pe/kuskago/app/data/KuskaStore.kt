@@ -69,6 +69,7 @@ data class FamilyMember(val name: String, val relation: String, val dni: String,
  */
 class KuskaStore(context: Context) {
 
+    private val appContext = context.applicationContext
     private val db = KuskaDatabase.get(context)
     private val usuarios = db.usuarioDao()
     private val sesion = db.sesionDao()
@@ -118,6 +119,42 @@ class KuskaStore(context: Context) {
 
     fun setRememberSession(value: Boolean) {
         settings.edit().putBoolean("remember_session", value).apply()
+    }
+
+    // La presentación automática se completa una sola vez por cuenta. El avance y la repetición usan el modo elegido.
+    private fun tutorialKey(dni: String, simple: Boolean): String =
+        "${if (simple) "simple" else "normal"}_$dni"
+
+    fun tutorialStep(dni: String, simple: Boolean): Int =
+        settings.getInt("tutorial_step_${tutorialKey(dni, simple)}", 0)
+
+    fun tutorialCompleted(dni: String, simple: Boolean): Boolean {
+        if (settings.getBoolean("tutorial_replay_${tutorialKey(dni, simple)}", false)) return false
+        // Conserva las finalizaciones de las versiones anteriores.
+        return settings.getBoolean("tutorial_completed_$dni", false) ||
+            settings.getBoolean("tutorial_done_normal_$dni", false) ||
+            settings.getBoolean("tutorial_done_simple_$dni", false) ||
+            settings.getBoolean("tutorial_done_$dni", false)
+    }
+
+    fun saveTutorialStep(dni: String, simple: Boolean, step: Int) {
+        settings.edit().putInt("tutorial_step_${tutorialKey(dni, simple)}", step).apply()
+    }
+
+    fun completeTutorial(dni: String, simple: Boolean) {
+        settings.edit()
+            .putBoolean("tutorial_completed_$dni", true)
+            .putBoolean("tutorial_replay_${tutorialKey(dni, simple)}", false)
+            .apply()
+    }
+
+    fun restartTutorial(simple: Boolean) {
+        val dni = dniActual() ?: return
+        val key = tutorialKey(dni, simple)
+        settings.edit()
+            .putInt("tutorial_step_$key", 0)
+            .putBoolean("tutorial_replay_$key", true)
+            .apply()
     }
 
     fun currentUser(): CurrentUser? =
@@ -175,6 +212,15 @@ class KuskaStore(context: Context) {
     }
 
     // ======================= PERFIL =======================
+
+    fun profilePhoto(): String? = dniActual()?.let { settings.getString("profile_photo_$it", null) }
+
+    suspend fun saveProfilePhoto(uri: android.net.Uri): String? {
+        val dni = dniActual() ?: return null
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            ProfilePhotos.save(appContext, dni, uri)
+        }
+    }
 
     fun getProfile(): Profile {
         val cur = currentUser()
@@ -393,13 +439,13 @@ class KuskaStore(context: Context) {
         const val DEMO_NAME = "Juan Quispe"
 
         val DEFAULT_DOCS = listOf(
-            StoredDoc("DNI.pdf", "Subido 12 nov. 2024", "🪪"),
-            StoredDoc("Croquis.jpg", "Subido 12 nov. 2024", "🗺️"),
-            StoredDoc("Constancia_posesion.pdf", "Subido 2 sep. 2025", "📜"),
+            StoredDoc("DNI.pdf", "Subido 12 nov. 2024", ":badge:"),
+            StoredDoc("Croquis.jpg", "Subido 12 nov. 2024", ":map:"),
+            StoredDoc("Constancia_posesion.pdf", "Subido 2 sep. 2025", ":historyedu:"),
         )
         val DEFAULT_FAMILY = listOf(
-            FamilyMember("Rosa Quispe M.", "Madre", "4562xxxx", "👵"),
-            FamilyMember("Luis Quispe F.", "Hijo", "7781xxxx", "👦"),
+            FamilyMember("Rosa Quispe M.", "Madre", "4562xxxx", ":elderly:"),
+            FamilyMember("Luis Quispe F.", "Hijo", "7781xxxx", ":face:"),
         )
 
         fun hash(text: String): String =

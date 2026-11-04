@@ -30,6 +30,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import pe.kuskago.app.ui.components.ProfileAvatar
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -221,17 +225,17 @@ fun DocumentsScreen(store: KuskaStore, onExit: () -> Unit, go: (Route) -> Unit) 
 
                     "choose" -> {
                         Hint("¿Cómo quieres agregar tu documento?")
-                        ChoiceCard("📄 Subir PDF o foto desde tu equipo", {
+                        ChoiceCard(":description: Subir PDF o foto desde tu equipo", {
                             picker.launch(arrayOf("application/pdf", "image/*"))
                         }, Modifier.padding(bottom = 10.dp))
-                        ChoiceCard("✏️ Crear documento nuevo", {
+                        ChoiceCard(":edit: Crear documento nuevo", {
                             docName = ""; content = ""; step = "create"
                         })
                     }
 
                     "form" -> {
                         KCard(Modifier.fillMaxWidth().padding(bottom = 16.dp), background = K.GreenSoft, borderColor = K.GreenSoftBorder) {
-                            IconLabel("✓  Archivo cargado: $pendingFile", fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = K.GreenDark)
+                            IconLabel(":check:  Archivo cargado: $pendingFile", fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = K.GreenDark)
                         }
                         FieldLabel("Nombre del documento")
                         KTextField(docName, { docName = it }, "Ej. Constancia de posesión", Modifier.padding(bottom = 14.dp))
@@ -242,7 +246,7 @@ fun DocumentsScreen(store: KuskaStore, onExit: () -> Unit, go: (Route) -> Unit) 
                             {
                                 if (docName.isNotBlank()) {
                                     val ext = pendingFile.substringAfterLast('.', "pdf")
-                                    val icon = if (ext.lowercase() in listOf("jpg", "jpeg", "png", "webp", "heic")) "🖼️" else "📄"
+                                    val icon = if (ext.lowercase() in listOf("jpg", "jpeg", "png", "webp", "heic")) ":image:" else ":description:"
                                     insertOrReplace(
                                         StoredDoc("${docName.trim()}.$ext", "${docType.ifBlank { "Documento" }} · agregado ${nowLabel()}", icon, uri = pendingUri)
                                     )
@@ -264,7 +268,7 @@ fun DocumentsScreen(store: KuskaStore, onExit: () -> Unit, go: (Route) -> Unit) 
                             "Guardar documento",
                             {
                                 if (docName.isNotBlank()) {
-                                    insertOrReplace(StoredDoc("${docName.trim()}.txt", "Creado en KuskaGo · ${nowLabel()}", "📝", content = content))
+                                    insertOrReplace(StoredDoc("${docName.trim()}.txt", "Creado en KuskaGo · ${nowLabel()}", ":editnote:", content = content))
                                 }
                             },
                             containerColor = if (docName.isNotBlank()) K.Green else K.Green.copy(alpha = 0.45f),
@@ -328,12 +332,12 @@ fun FamilyScreen(store: KuskaStore, onExit: () -> Unit, go: (Route) -> Unit, onF
     fun iconFor(rel: String): String {
         val r = rel.lowercase()
         return when {
-            "madre" in r || "abuela" in r -> "👵"
-            "padre" in r || "abuelo" in r -> "👴"
-            "hijo" in r -> "👦"
-            "hija" in r -> "👧"
-            "esposa" in r || "cónyuge" in r || "conyuge" in r || "esposo" in r -> "💑"
-            else -> "🧑"
+            "madre" in r || "abuela" in r -> ":elderly:"
+            "padre" in r || "abuelo" in r -> ":elderly:"
+            "hijo" in r -> ":face:"
+            "hija" in r -> ":face:"
+            "esposa" in r || "cónyuge" in r || "conyuge" in r || "esposo" in r -> ":favorite:"
+            else -> ":person:"
         }
     }
 
@@ -387,7 +391,7 @@ fun FamilyScreen(store: KuskaStore, onExit: () -> Unit, go: (Route) -> Unit, onF
                         SectionLabel("Trámite sugerido", Modifier.padding(top = 8.dp, bottom = 8.dp))
                         KCard(Modifier.fillMaxWidth()) {
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                                KIcon("🏛️", size = 28.dp, tint = K.Green)
+                                KIcon(":accountbalance:", size = 28.dp, tint = K.Green)
                                 Column {
                                     Text("Herencia / Sucesión", fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = K.Ink)
                                     Text("Registro de sucesión intestada", fontSize = 12.sp, color = K.Muted)
@@ -460,19 +464,19 @@ fun HelpScreen(onExit: () -> Unit, go: (Route) -> Unit) {
                     "problem" -> {
                         Hint("¿En qué necesitas ayuda?")
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            ChoiceCard("📎 Me falta un documento", { topic = "doc"; step = "channel" })
-                            ChoiceCard("❓ No entiendo un término", { topic = "term"; step = "channel" })
-                            ChoiceCard("⚠️ Mi trámite está observado", { topic = "observed"; step = "channel" })
-                            ChoiceCard("💬 Otro", { topic = "other"; step = "channel" })
+                            ChoiceCard(":attachfile: Me falta un documento", { topic = "doc"; step = "channel" })
+                            ChoiceCard(":helpoutline: No entiendo un término", { topic = "term"; step = "channel" })
+                            ChoiceCard(":warningamber: Mi trámite está observado", { topic = "observed"; step = "channel" })
+                            ChoiceCard(":chat: Otro", { topic = "other"; step = "channel" })
                         }
                     }
 
                     "channel" -> {
                         Hint("¿Cómo prefieres contarnos más?")
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            ChoiceCard("⌨️ Escribir", { step = "write" })
-                            ChoiceCard("🎙️ Hablar", { step = "response" })
-                            ChoiceCard("📷 Enviar foto", { step = "response" })
+                            ChoiceCard(":keyboard: Escribir", { step = "write" })
+                            ChoiceCard(":mic: Hablar", { step = "response" })
+                            ChoiceCard(":photocamera: Enviar foto", { step = "response" })
                         }
                     }
 
@@ -553,7 +557,7 @@ fun CitizenRouteScreen(store: KuskaStore, onExit: () -> Unit, go: (Route) -> Uni
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                StepDot(if (n in done) "✓" else "$n", if (n in done) 2 else if (n == current) 1 else 0)
+                                StepDot(if (n in done) ":check:" else "$n", if (n in done) 2 else if (n == current) 1 else 0)
                                 Column(Modifier.weight(1f)) {
                                     Text(ROUTE_NAMES.getValue(n), fontWeight = FontWeight.ExtraBold, fontSize = 14.5.sp, color = K.Ink)
                                     Text(ROUTE_SUBS.getValue(n), fontSize = 12.sp, color = K.Muted)
@@ -562,7 +566,7 @@ fun CitizenRouteScreen(store: KuskaStore, onExit: () -> Unit, go: (Route) -> Uni
                             }
                         }
                         Spacer(Modifier.height(14.dp))
-                        SecondaryButton("📍 Ver mapa y puntos de atención", { view = "map" }, minHeight = 46.dp, fontSize = 14.sp)
+                        SecondaryButton(":locationon: Ver mapa y puntos de atención", { view = "map" }, minHeight = 46.dp, fontSize = 14.sp)
                     }
 
                     "map" -> {}
@@ -708,7 +712,7 @@ fun AlertsScreen(store: KuskaStore, onExit: () -> Unit, go: (Route) -> Unit) {
                     .border(1.dp, K.Border, RoundedCornerShape(10.dp))
                     .clickable(role = Role.Button) { go(Route.Profile) },
                 contentAlignment = Alignment.Center,
-            ) { KIcon("⚙️", size = 22.dp, tint = K.Ink) }
+            ) { KIcon(":settings:", size = 22.dp, tint = K.Ink) }
         }
         if (open == null) {
             val counts = mapOf(
@@ -730,7 +734,7 @@ fun AlertsScreen(store: KuskaStore, onExit: () -> Unit, go: (Route) -> Unit) {
             Scroll {
                 if (open == null) {
                     if (alerts.isEmpty()) {
-                        IconLabel("🎉 No tienes avisos por ahora.", fontSize = 14.sp, color = K.Muted, modifier = Modifier.padding(vertical = 30.dp))
+                        IconLabel(":celebration: No tienes avisos por ahora.", fontSize = 14.sp, color = K.Muted, modifier = Modifier.padding(vertical = 30.dp))
                     }
                     alerts.filter { filter == "all" || it.kind == filter }.forEach { a ->
                         val (bg, fg) = alertColors(a.kind)
@@ -780,18 +784,41 @@ fun EditProfileScreen(store: KuskaStore, onBack: () -> Unit, onSaved: () -> Unit
     var home by rememberSaveable { mutableStateOf(store.getPersonalData()["domicilio"].orEmpty()) }
     var error by remember { mutableStateOf<String?>(null) }
     val savedData = remember { mutableStateListOf<Pair<String, String>>().apply { addAll(store.getSavedTramiteData()) } }
+    var photo by rememberSaveable { mutableStateOf(store.profilePhoto()) }
+    var photoBusy by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        if (uri != null) scope.launch {
+            photoBusy = true
+            try {
+                val saved = store.saveProfilePhoto(uri)
+                if (saved != null) {
+                    photo = saved
+                    context.toast("Foto de perfil actualizada")
+                } else {
+                    context.toast("No se pudo abrir la imagen. Elige otra foto.")
+                }
+            } finally {
+                photoBusy = false
+            }
+        }
+    }
+
 
     Screen {
         TopBar(onBack = onBack, title = "Editar datos")
         Box(Modifier.weight(1f)) {
             Scroll {
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Image(
-                        painterResource(R.drawable.img_avatar), null,
-                        Modifier.size(72.dp).clip(CircleShape),
-                    )
+                    ProfileAvatar(photo, Modifier.size(88.dp))
                 }
-                GhostButton("Cambiar foto", { context.toast("Cambiar foto: disponible próximamente") }, fontSize = 13.sp)
+                SecondaryButton(
+                    if (photoBusy) "Guardando foto…" else "Cambiar foto de perfil",
+                    { if (!photoBusy) photoPicker.launch(arrayOf("image/*")) },
+                    modifier = Modifier.padding(vertical = 10.dp),
+                )
+                Text("La foto se guarda al elegirla.", fontSize = 12.sp, color = K.Muted,
+                    modifier = Modifier.padding(bottom = 12.dp))
                 error?.let { ErrorCard("Revisa tus datos", it, Modifier.padding(bottom = 14.dp)) }
                 ScanDniCard(
                     onResult = { d ->
@@ -875,6 +902,7 @@ fun SimpleFlowScreen(onExit: () -> Unit, go: (Route) -> Unit) {
     val speak = rememberSpeaker()
     val order = listOf("search", "detail", "req", "route", "track")
     var step by rememberSaveable { mutableStateOf("search") }
+    LaunchedEffect(step) { speak.stop() }
     val idx = order.indexOf(step)
     val titles = mapOf("search" to "Buscar trámite", "detail" to "Tu trámite", "req" to "Requisitos", "route" to "Tu ruta", "track" to "Seguimiento")
     val texts = mapOf(
@@ -905,39 +933,39 @@ fun SimpleFlowScreen(onExit: () -> Unit, go: (Route) -> Unit) {
                             contentPadding = PaddingValues(20.dp),
                         ) {
                             Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                                KIcon("🏞️", size = 38.dp, tint = K.Green)
+                                KIcon(":landscape:", size = 38.dp, tint = K.Green)
                                 Text("Registro de terreno", fontWeight = FontWeight.ExtraBold, fontFamily = KFont.Title, fontSize = 17.sp, color = K.Ink)
                             }
                         }
-                        ListenButton("🔊 Escuchar opciones", say)
+                        ListenButton(if (speak.isSpeaking) ":stop: Detener explicación" else ":volumeup: Escuchar opciones", say)
                     }
 
                     "detail" -> {
                         Text("Registro de terreno", fontFamily = KFont.Title, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = K.Ink, modifier = Modifier.padding(bottom = 14.dp))
                         KCard(Modifier.fillMaxWidth().padding(bottom = 18.dp), background = K.GreenSoft, borderColor = K.GreenSoftBorder) {
-                            IconLabel("👍 Vas 60% listo", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = K.Ink, modifier = Modifier.padding(bottom = 10.dp))
+                            IconLabel(":thumbup: Vas 60% listo", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = K.Ink, modifier = Modifier.padding(bottom = 10.dp))
                             KProgress(0.6f)
                         }
                         BigButton("Ver qué me falta") { step = "req" }
-                        ListenButton("🔊 Escuchar", say)
+                        ListenButton(if (speak.isSpeaking) ":stop: Detener explicación" else ":volumeup: Escuchar", say)
                     }
 
                     "req" -> {
                         Text("Te falta esto:", fontFamily = KFont.Title, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = K.Ink, modifier = Modifier.padding(bottom = 16.dp))
                         KCard(Modifier.fillMaxWidth().padding(bottom = 14.dp), contentPadding = PaddingValues(18.dp)) {
                             Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                                KIcon("📜", size = 34.dp, tint = K.Green)
+                                KIcon(":historyedu:", size = 34.dp, tint = K.Green)
                                 Text("Constancia de posesión", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = K.Ink)
                             }
                         }
                         BigButton("Ver cómo conseguirlo") { step = "route" }
-                        ListenButton("🔊 Escuchar", say)
+                        ListenButton(if (speak.isSpeaking) ":stop: Detener explicación" else ":volumeup: Escuchar", say)
                     }
 
                     "route" -> {
                         Text("Sigue estos pasos:", fontFamily = KFont.Title, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = K.Ink, modifier = Modifier.padding(bottom = 16.dp))
                         listOf(
-                            Triple("✓", 2, "Ve a tu municipalidad"),
+                            Triple(":check:", 2, "Ve a tu municipalidad"),
                             Triple("2", 1, "Pide la constancia"),
                             Triple("3", 0, "Súbela a KuskaGo"),
                         ).forEach { (mark, state, text) ->
@@ -950,7 +978,7 @@ fun SimpleFlowScreen(onExit: () -> Unit, go: (Route) -> Unit) {
                         }
                         Spacer(Modifier.height(8.dp))
                         BigButton("Ya lo hice") { step = "track" }
-                        ListenButton("🔊 Escuchar", say)
+                        ListenButton(if (speak.isSpeaking) ":stop: Detener explicación" else ":volumeup: Escuchar", say)
                     }
 
                     else -> {
@@ -962,7 +990,7 @@ fun SimpleFlowScreen(onExit: () -> Unit, go: (Route) -> Unit) {
                             Box(
                                 Modifier.size(80.dp).clip(CircleShape).background(K.OkBg),
                                 contentAlignment = Alignment.Center,
-                            ) { KIcon("👍", size = 42.dp, tint = K.SelvaText) }
+                            ) { KIcon(":thumbup:", size = 42.dp, tint = K.SelvaText) }
                             Text("¡Listo! Te avisamos", fontFamily = KFont.Title, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = K.Ink)
                             Text(
                                 "Cuando tengas todo, te avisamos por KuskaAlert para el siguiente paso.",
@@ -970,7 +998,7 @@ fun SimpleFlowScreen(onExit: () -> Unit, go: (Route) -> Unit) {
                             )
                         }
                         SecondaryButton("Volver al inicio", { go(Route.HomeSimple) }, minHeight = 60.dp)
-                        ListenButton("🔊 Escuchar", say)
+                        ListenButton(if (speak.isSpeaking) ":stop: Detener explicación" else ":volumeup: Escuchar", say)
                     }
                 }
             }

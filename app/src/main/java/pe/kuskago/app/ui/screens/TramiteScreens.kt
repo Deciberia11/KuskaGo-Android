@@ -152,7 +152,7 @@ fun TramiteDetailScreen(
                             background = K.SkyBg, borderColor = K.SkyBorder,
                         ) {
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                                KIcon("🚌", size = 24.dp, tint = K.SkyText)
+                                KIcon(":directionsbus:", size = 24.dp, tint = K.SkyText)
                                 Text(
                                     "No viajes todavía. Aún te faltan 2 requisitos. Puedes completarlos sin desplazarte.",
                                     fontSize = 12.5.sp, color = K.SkyText, fontWeight = FontWeight.Bold,
@@ -165,8 +165,8 @@ fun TramiteDetailScreen(
                     }
 
                     "requisitos" -> {
-                        ListItemRow("✓", "DNI vigente", "Completo", K.Green, K.OkBg, K.Green) { go(Route.RequisitoDetail) }
-                        ListItemRow("✓", "Plano o croquis", "Completo", K.Green, K.OkBg, K.Green) { go(Route.RequisitoDetail) }
+                        ListItemRow(":check:", "DNI vigente", "Completo", K.Green, K.OkBg, K.Green) { go(Route.RequisitoDetail) }
+                        ListItemRow(":check:", "Plano o croquis", "Completo", K.Green, K.OkBg, K.Green) { go(Route.RequisitoDetail) }
                         ListItemRow("!", "Constancia de posesión", "Pendiente", WarnText, WarnBg, WarnText) { go(Route.RequisitoDetail) }
                         ListItemRow("!", "Pago de tasa", "Pendiente", WarnText, WarnBg, WarnText) { go(Route.RequisitoDetail) }
                     }
@@ -197,8 +197,8 @@ fun TramiteDetailScreen(
                                 "Organismo de Formalización de la Propiedad Informal",
                                 fontSize = 13.sp, color = K.Muted, modifier = Modifier.padding(top = 4.dp, bottom = 10.dp),
                             )
-                            IconLabel("📍 Jr. Los Álamos 123, tu distrito", fontSize = 13.sp, color = K.Label)
-                            IconLabel("📞 (01) 615-6969", fontSize = 13.sp, color = K.Label)
+                            IconLabel(":locationon: Jr. Los Álamos 123, tu distrito", fontSize = 13.sp, color = K.Label)
+                            IconLabel(":phone: (01) 615-6969", fontSize = 13.sp, color = K.Label)
                         }
                         SecondaryButton("Ir al sitio oficial", { context.openUrl("https://www.gob.pe/cofopri") })
                     }
@@ -211,7 +211,7 @@ fun TramiteDetailScreen(
 @Composable
 private fun CheckLine(ok: Boolean, text: String) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        KIcon(if (ok) "✓" else "⚠", size = 20.dp, tint = if (ok) K.SelvaText else WarnIcon)
+        KIcon(if (ok) ":check:" else ":warningamber:", size = 20.dp, tint = if (ok) K.SelvaText else WarnIcon)
         Text(text, fontSize = 13.sp, color = K.Ink)
     }
 }
@@ -237,7 +237,7 @@ fun RequisitoDetailScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     PrimaryButton("Subir documento", { go(Route.Documents) })
                     SecondaryButton("Usar documento guardado", { go(Route.Documents) })
-                    SecondaryButton("🗣️ Traducir este documento", { go(Route.Translator) })
+                    SecondaryButton(":recordvoiceover: Traducir este documento", { go(Route.Translator) })
                     SecondaryButton("Usar plantilla de solicitud", { go(Route.Templates) })
                     SecondaryButton("Ver entidad", onEntity)
                     GhostButton("Volver", onBack)
@@ -293,7 +293,7 @@ fun TemplatesScreen(
     val bodyText = tpl.intro(name.trim(), address.trim(), time.trim())
     fun html() = buildDocHtml(tpl.title, todayLabel(), bodyText, emptyList())
     fun saveDoc() {
-        store.addDoc(StoredDoc(tpl.title + ".pdf", "Plantilla · ${shortDate()}", "📝", content = bodyText))
+        store.addDoc(StoredDoc(tpl.title + ".pdf", "Plantilla · ${shortDate()}", ":editnote:", content = bodyText))
         store.savePersonalData(mapOf("nombre" to name, "predio_direccion" to address, "posesion_tiempo" to time))
     }
 
@@ -305,7 +305,7 @@ fun TemplatesScreen(
                     "list" -> {
                         Body("Elige la plantilla que necesitas para tu trámite.")
                         TEMPLATES.forEachIndexed { i, t ->
-                            ListItemRow("📝", t.title, "Editable · PDF") { selected = i; step = "fill" }
+                            ListItemRow(":editnote:", t.title, "Editable · PDF") { selected = i; step = "fill" }
                         }
                     }
 
@@ -511,7 +511,7 @@ fun TramiteWizardScreen(
     LaunchedEffect(isDone) {
         if (isDone && !saved) {
             val text = def.docIntro + "\n\n" + lines.joinToString("\n") { "${it.first}: ${it.second}" }
-            store.addDoc(StoredDoc(def.docTitle + ".pdf", "${def.entity} · ${shortDate()}", "🧾", content = text))
+            store.addDoc(StoredDoc(def.docTitle + ".pdf", "${def.entity} · ${shortDate()}", ":receiptlong:", content = text))
             store.addTramite(type, def.title, def.entity, def.docTitle + ".pdf")
             val toRemember = def.questions.mapIndexedNotNull { i, q ->
                 q.key?.takeIf { it != "dni" }?.let { k -> k to answers[i] }
@@ -544,14 +544,14 @@ fun TramiteWizardScreen(
                         KCard(Modifier.fillMaxWidth().padding(bottom = 18.dp), background = K.GreenSoft, borderColor = K.GreenSoftBorder) {
                             knownIdx.forEach { i ->
                                 Row(Modifier.fillMaxWidth().padding(vertical = 7.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    KIcon("✓", size = 20.dp, tint = K.SelvaText)
+                                    KIcon(":check:", size = 20.dp, tint = K.SelvaText)
                                     Text(def.questions[i].label, fontSize = 13.sp, color = K.Muted, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                                     Text(answers[i], fontSize = 13.sp, color = K.Ink, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
                                 }
                             }
                         }
                         PrimaryButton(
-                            if (missingIdx.isEmpty()) "✓ Sí, generar documento" else "✓ Sí, usar mis datos",
+                            if (missingIdx.isEmpty()) ":check: Sí, generar documento" else ":check: Sí, usar mis datos",
                             {
                                 askAll = false; step = 0
                                 phase = if (missingIdx.isEmpty()) "done" else "ask"
@@ -567,7 +567,7 @@ fun TramiteWizardScreen(
                         val value = answers[qi]
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 14.dp)) {
                             Chip(def.entity, K.SkyBg, K.SkyText)
-                            if (!askAll && knownIdx.isNotEmpty()) Chip("✓ ${knownIdx.size} datos ya completados", K.OkBg, K.GreenDark)
+                            if (!askAll && knownIdx.isNotEmpty()) Chip(":check: ${knownIdx.size} datos ya completados", K.OkBg, K.GreenDark)
                         }
                         KProgress(step.toFloat() / askList.size, Modifier.padding(bottom = 8.dp))
                         Text(
@@ -583,14 +583,14 @@ fun TramiteWizardScreen(
                                 onValueChange = { answers[qi] = if (q.numeric) it.filter { c -> c.isDigit() }.take(8) else it },
                                 placeholder = q.placeholder,
                                 keyboardType = if (q.numeric) KeyboardType.Number else KeyboardType.Text,
-                                enabled = q.key != "dni" || value.isBlank(),   // el DNI de tu cuenta no se cambia aquí
+                                enabled = q.key != "dni" || value.isBlank(),   // el DNI de la cuenta es de solo lectura
                                 modifier = Modifier.padding(bottom = 22.dp),
                             )
                         }
                         val lk = q.key
                         if (lk != null && lk in LOCATION_KEYS) {
                             UseMyLocationButton(
-                                label = if (lk.endsWith("distrito")) "📍 Usar el distrito donde estoy" else "📍 Usar mi ubicación actual",
+                                label = if (lk.endsWith("distrito")) ":locationon: Usar el distrito donde estoy" else ":locationon: Usar mi ubicación actual",
                                 onResult = { g ->
                                     answers[qi] = when {
                                         lk.endsWith("distrito") -> g.district ?: g.full
@@ -609,7 +609,7 @@ fun TramiteWizardScreen(
                         }
                         if (q.key != null) {
                             IconLabel(
-                                "💾 Lo recordaremos para tus próximos trámites.",
+                                ":save: Lo recordaremos para tus próximos trámites.",
                                 fontSize = 11.5.sp, color = K.Muted2, modifier = Modifier.padding(top = 0.dp, bottom = 12.dp),
                             )
                         }
@@ -626,12 +626,12 @@ fun TramiteWizardScreen(
 
                     else -> {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 14.dp)) {
-                            Chip("✓ Documento generado", K.OkBg, K.GreenDark)
+                            Chip(":check: Documento generado", K.OkBg, K.GreenDark)
                         }
                         if (newlySaved > 0) {
                             KCard(Modifier.fillMaxWidth().padding(bottom = 14.dp), background = K.GreenSoft, borderColor = K.GreenSoftBorder) {
                                 IconLabel(
-                                    "💾 Guardamos $newlySaved ${if (newlySaved == 1) "dato" else "datos"} para que no los vuelvas a escribir. Puedes verlos o borrarlos en Perfil → Editar datos.",
+                                    ":save: Guardamos $newlySaved ${if (newlySaved == 1) "dato" else "datos"} para que no los vuelvas a escribir. Puedes verlos o borrarlos en Perfil → Editar datos.",
                                     fontSize = 12.5.sp, color = K.GreenDark, fontWeight = FontWeight.Bold,
                                 )
                             }
@@ -661,7 +661,7 @@ fun TramiteWizardScreen(
                                 Text("Firma del solicitante", fontSize = 11.5.sp, color = K.Muted, modifier = Modifier.padding(top = 6.dp))
                             }
                         }
-                        PrimaryButton("🖨️ Imprimir / Guardar como PDF", {
+                        PrimaryButton(":print: Imprimir / Guardar como PDF", {
                             context.printHtml(def.docTitle, buildDocHtml(def.docTitle, "${def.entity} · $today", def.docIntro, lines))
                         })
                         Spacer(Modifier.height(12.dp))
