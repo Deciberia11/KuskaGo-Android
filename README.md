@@ -190,3 +190,28 @@ En producción se usarían funciones `suspend` con corrutinas.
 - Las contraseñas se guardan cifradas con hash SHA-256 (la versión web las guardaba en texto plano).
 - "Recuperar contraseña" sí actualiza la contraseña si la cuenta existe y ambas contraseñas coinciden.
 - "Escuchar explicación" usa el motor de Texto a Voz del teléfono en español.
+
+
+## Guía de primer uso
+
+La guía se presenta automáticamente una sola vez por cuenta, al llegar a Inicio
+tras el primer acceso, y corresponde únicamente al modo elegido (Normal o Sencillo).
+Incluye controles resaltados, Anterior, Siguiente y Entendido. No se cierra ni avanza
+por tiempo. Si se interrumpe antes de terminar, conserva el avance local.
+
+Al completarla, no aparece automáticamente en posteriores inicios de sesión ni al
+cambiar de modo. Las finalizaciones de versiones anteriores también se respetan.
+Perfil > Volver a ver el tutorial inicia de nuevo la guía del modo seleccionado cada
+vez que se pulsa, sin reiniciar la condición de primer uso. Borrar los datos de la
+aplicación elimina este historial local.
+
+El modo se elige en Preferencias o Accesibilidad. Volver al modo normal guarda esa
+elección; Configurar después usa el modo normal. La bienvenida muestra el monograma
+K ampliado en lugar de la ilustración del personaje.
+
+Los iconos utilizan claves descriptivas y Material Icons, con compatibilidad para
+los documentos guardados en versiones anteriores.
+
+Otras mejoras: etiquetas en Avisos y Perfil, estado seleccionado accesible en la
+navegación, limpieza de búsquedas y restricciones para datos incompletos.
+La recuperación por SMS/correo sigue siendo una simulación del prototipo.
