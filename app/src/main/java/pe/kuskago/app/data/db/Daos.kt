@@ -21,6 +21,10 @@ interface UsuarioDao {
 
     @Query("UPDATE usuario SET nombre = :nombre, celular = :celular, distrito = :distrito WHERE dni = :dni")
     fun actualizarPerfil(dni: String, nombre: String, celular: String, distrito: String)
+
+    /** Las relaciones existentes eliminan los datos dependientes con ON DELETE CASCADE. */
+    @Query("DELETE FROM usuario WHERE dni = :dni")
+    fun eliminar(dni: String): Int
 }
 
 @Dao

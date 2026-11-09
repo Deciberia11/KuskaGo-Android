@@ -291,6 +291,7 @@ fun LoginScreen(
 // 3. CREAR CUENTA
 // =============================================================
 private enum class SignUpError(val title: String, val body: String) {
+    EXISTS("Este DNI ya tiene una cuenta", "Inicia sesión con esa cuenta o usa otro DNI para crear una nueva."),
     NAME("Falta tu nombre", "Ingresa tus nombres completos para crear la cuenta."),
     DNI("DNI inválido", "El DNI debe tener exactamente 8 números, sin letras."),
     PHONE("Celular inválido", "El celular debe tener 9 números, empezar con 9 y no contener letras, espacios ni caracteres especiales."),
@@ -318,6 +319,7 @@ fun SignUpScreen(store: KuskaStore, onBack: () -> Unit, onGoToLogin: () -> Unit)
         error = when {
             n.isEmpty() -> SignUpError.NAME
             !DNI_REGEX.matches(dni.trim()) -> SignUpError.DNI
+            store.accountExists(dni.trim()) -> SignUpError.EXISTS
             !PHONE_REGEX.matches(phone.trim()) -> SignUpError.PHONE
             pass.isBlank() -> SignUpError.PASS
             pass != pass2 -> SignUpError.MISMATCH

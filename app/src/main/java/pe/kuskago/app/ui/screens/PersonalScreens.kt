@@ -437,19 +437,17 @@ private val HELP = mapOf(
     "doc" to HelpResp("Te ayudamos a conseguirlo", "Notamos que te falta un documento. Te mostramos qué es y cómo obtenerlo.", "Ver cómo obtenerlo", Route.RequisitoDetail),
     "term" to HelpResp("Aquí tienes la explicación", "Traducimos el término a lenguaje sencillo, con un ejemplo.", "Ver traductor de burocracia", Route.Translator),
     "observed" to HelpResp("Vamos a revisar la observación", "La entidad encontró algo que debes corregir. Te mostramos qué hacer.", "Ver observación", Route.TramiteDetail),
-    "other" to HelpResp("Un asesor te contactará", "Registramos tu consulta. Un asesor de KuskaGo te escribirá pronto.", "Ir al inicio", Route.Home),
+    "other" to HelpResp("Habla con soporte", "Puedes explicar tu problema a una persona por WhatsApp o llamar al 939 138 494. Esta orientación automática no envía tu consulta.", "Hablar con una persona", Route.Support),
 )
 
 @Composable
 fun HelpScreen(onExit: () -> Unit, go: (Route) -> Unit) {
     var step by rememberSaveable { mutableStateOf("problem") }
     var topic by rememberSaveable { mutableStateOf("doc") }
-    var message by rememberSaveable { mutableStateOf("") }
 
     fun back() {
         when (step) {
             "response" -> step = "channel"
-            "write" -> step = "channel"
             "channel" -> step = "problem"
             else -> onExit()
         }
@@ -462,6 +460,9 @@ fun HelpScreen(onExit: () -> Unit, go: (Route) -> Unit) {
             Scroll {
                 when (step) {
                     "problem" -> {
+                        PrimaryButton("Hablar con una persona", { go(Route.Support) }, modifier = Modifier.padding(bottom = 12.dp))
+                        SecondaryButton("Ver guía completa de KuskaGo", { go(Route.CompleteGuide) }, modifier = Modifier.padding(bottom = 18.dp))
+                        Text("Ayuda automática: elige un tema para consultar orientación. No estás conversando con un asesor.", color = K.Muted, modifier = Modifier.padding(bottom = 12.dp))
                         Hint("¿En qué necesitas ayuda?")
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             ChoiceCard(":attachfile: Me falta un documento", { topic = "doc"; step = "channel" })
@@ -472,21 +473,11 @@ fun HelpScreen(onExit: () -> Unit, go: (Route) -> Unit) {
                     }
 
                     "channel" -> {
-                        Hint("¿Cómo prefieres contarnos más?")
+                        Hint("¿Cómo prefieres recibir ayuda?")
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            ChoiceCard(":keyboard: Escribir", { step = "write" })
-                            ChoiceCard(":mic: Hablar", { step = "response" })
-                            ChoiceCard(":photocamera: Enviar foto", { step = "response" })
+                            ChoiceCard(":helpoutline: Ver orientación automática", { step = "response" })
+                            ChoiceCard(":supportagent: Hablar con una persona", { go(Route.Support) })
                         }
-                    }
-
-                    "write" -> {
-                        FieldLabel("Cuéntanos tu problema")
-                        KTextField(
-                            message, { message = it }, "Escribe aquí lo que necesitas…",
-                            Modifier.padding(bottom = 22.dp), singleLine = false, minLines = 5,
-                        )
-                        PrimaryButton("Enviar", { step = "response" })
                     }
 
                     else -> {
@@ -496,6 +487,7 @@ fun HelpScreen(onExit: () -> Unit, go: (Route) -> Unit) {
                             Text(r.body, fontSize = 13.5.sp, color = K.Label, lineHeight = 20.sp)
                         }
                         PrimaryButton(r.action, { go(r.route) })
+                        SecondaryButton("Hablar con una persona", { go(Route.Support) }, modifier = Modifier.padding(top = 12.dp))
                     }
                 }
             }
@@ -810,7 +802,7 @@ fun EditProfileScreen(store: KuskaStore, onBack: () -> Unit, onSaved: () -> Unit
         Box(Modifier.weight(1f)) {
             Scroll {
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    ProfileAvatar(photo, Modifier.size(88.dp))
+                    ProfileAvatar(photo, Modifier.size(88.dp), name = name)
                 }
                 SecondaryButton(
                     if (photoBusy) "Guardando foto…" else "Cambiar foto de perfil",

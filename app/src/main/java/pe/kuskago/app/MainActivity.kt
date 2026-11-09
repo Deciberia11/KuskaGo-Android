@@ -29,6 +29,8 @@ import pe.kuskago.app.ui.screens.DocumentsScreen
 import pe.kuskago.app.ui.screens.EditProfileScreen
 import pe.kuskago.app.ui.screens.FamilyScreen
 import pe.kuskago.app.ui.screens.HelpScreen
+import pe.kuskago.app.ui.screens.CompleteGuideScreen
+import pe.kuskago.app.ui.screens.SupportScreen
 import pe.kuskago.app.ui.screens.MyTramitesScreen
 import pe.kuskago.app.ui.screens.RequisitoDetailScreen
 import pe.kuskago.app.ui.screens.SimpleFlowScreen
@@ -65,7 +67,7 @@ enum class Route {
     Home, HomeSimple, Search, Profile, Accessibility,
     TramiteDetail, RequisitoDetail, Templates, Translator, TramiteWizard,
     Documents, Family, Help, CitizenRoute, Alerts, EditProfile, SimpleFlow,
-    MyTramites,
+    MyTramites, CompleteGuide, Support,
 }
 
 /** Pila de navegación simple: ir a una pantalla que ya está en la pila vuelve a ella. */
@@ -115,7 +117,12 @@ fun KuskaGoApp() {
         when {
             user != null && store.rememberSession() -> {
                 val guided = store.getPrefs(user.dni)?.guided == true
-                Navigator(listOf(if (guided) Route.HomeSimple else Route.Home))
+                if (store.preferencesSetupCompleted(user.dni)) {
+                    Navigator(listOf(if (guided) Route.HomeSimple else Route.Home))
+                } else {
+                    store.beginPreferencesSetup(user.dni)
+                    Navigator(listOf(Route.Preferences))
+                }
             }
             else -> {
                 if (user != null) store.setCurrentUser(null)   // sesión sin "Recordarme": se cierra
@@ -171,7 +178,15 @@ fun KuskaGoApp() {
                 onBack = { nav.go(Route.Welcome) },
                 onForgot = { nav.go(Route.ForgotPassword) },
                 onSignUp = { nav.go(Route.SignUp) },
-                onLoggedIn = { nav.go(Route.Preferences) },
+                onLoggedIn = {
+                    val dni = store.currentUser()?.dni.orEmpty()
+                    if (store.preferencesSetupCompleted(dni)) {
+                        nav.reset(selectedHome())
+                    } else {
+                        store.beginPreferencesSetup(dni)
+                        nav.go(Route.Preferences)
+                    }
+                },
             )
 
             Route.SignUp -> SignUpScreen(
@@ -189,8 +204,14 @@ fun KuskaGoApp() {
             Route.Preferences -> PreferencesScreen(
                 store = store,
                 onBack = { nav.go(Route.Login) },
-                onContinue = { _ -> nav.reset(selectedHome()) },
-                onSkip = { selectNormalMode() },
+                onContinue = { _ ->
+                    store.completePreferencesSetup(store.currentUser()?.dni.orEmpty())
+                    nav.reset(selectedHome())
+                },
+                onSkip = {
+                    store.completePreferencesSetup(store.currentUser()?.dni.orEmpty())
+                    selectNormalMode()
+                },
             )
 
             Route.Home -> HomeTutorial(store, simple = false, active = route == currentRoute && selectedHome() == Route.Home) { target ->
@@ -244,6 +265,10 @@ fun KuskaGoApp() {
 
             Route.Help -> HelpScreen(onExit = { nav.back() }, go = go)
 
+            Route.CompleteGuide -> CompleteGuideScreen(store = store, onBack = { nav.back() }, go = go)
+
+            Route.Support -> SupportScreen(onBack = { nav.back() })
+
             Route.MyTramites -> MyTramitesScreen(
                 store = store,
                 onBack = { nav.back() },
@@ -265,6 +290,7 @@ fun KuskaGoApp() {
             Route.Profile -> ProfileScreen(
                 store = store,
                 showUpdated = profileUpdated,
+                onAccountDeleted = { nav.reset(Route.Welcome, Route.Login) },
                 onBack = { nav.back() },
                 go = go,
                 onLogout = {

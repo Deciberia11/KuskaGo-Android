@@ -41,6 +41,8 @@ import pe.kuskago.app.ui.components.rememberSpeaker
 import pe.kuskago.app.ui.theme.K
 import pe.kuskago.app.ui.components.IconLabel
 import pe.kuskago.app.ui.components.KIcon
+import pe.kuskago.app.ui.components.PreferenceTutorial
+import pe.kuskago.app.ui.components.SecondaryButton
 import pe.kuskago.app.ui.theme.buttonScale
 import pe.kuskago.app.ui.theme.textScale
 
@@ -73,7 +75,7 @@ private fun AccessPrefs.toggle(k: PrefKey) = when (k) {
 }
 
 @Composable
-private fun HomeModeSelector(simple: Boolean, onSelect: (Boolean) -> Unit) {
+private fun HomeModeSelector(simple: Boolean, target: (String) -> Modifier = { Modifier }, onSelect: (Boolean) -> Unit) {
     Text("Modo de inicio", fontWeight = FontWeight.ExtraBold, color = K.Ink,
         modifier = Modifier.padding(bottom = 10.dp))
     listOf(false to "Modo normal", true to "Modo sencillo").forEach { (value, title) ->
@@ -81,7 +83,7 @@ private fun HomeModeSelector(simple: Boolean, onSelect: (Boolean) -> Unit) {
             checked = simple == value,
             onClick = { onSelect(value) },
             role = Role.RadioButton,
-            modifier = Modifier.padding(bottom = 10.dp),
+            modifier = Modifier.padding(bottom = 10.dp).then(target(if (value) "simple_mode" else "normal_mode")),
         ) {
             Column(Modifier.weight(1f)) {
                 Text(title, fontWeight = FontWeight.Bold, color = K.Ink)
@@ -105,6 +107,7 @@ fun PreferencesScreen(
     onSkip: () -> Unit,
 ) {
     val dni = remember { store.currentUser()?.dni.orEmpty() }
+    LaunchedEffect(dni) { store.beginPreferencesSetup(dni) }
     var p by remember { mutableStateOf(store.getPrefs(dni) ?: AccessPrefs()) }
     fun save(newPrefs: AccessPrefs) {
         p = newPrefs
@@ -124,6 +127,7 @@ fun PreferencesScreen(
     }
     val previewSize = if (p.big) (mapOf(1 to 15, 2 to 17, 3 to 19, 4 to 22, 5 to 25)[p.textSize] ?: 19) else 15
 
+    PreferenceTutorial(store, autoShow = true, hasPreview = true) { target, replay ->
     Screen {
         TopBar(onBack = onBack, title = "¿Cómo prefieres usar KuskaGo?", titleSize = px(17f))
         Column(
@@ -132,18 +136,20 @@ fun PreferencesScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 2.dp),
         ) {
+            SecondaryButton("Guía para elegir mis preferencias", replay,
+                modifier = Modifier.padding(bottom = 12.dp).then(target("guides")))
             Text(
                 "Elige una o varias opciones. Puedes cambiarlas cuando quieras.",
                 fontSize = px(13.5f),
                 color = K.Muted,
                 modifier = Modifier.padding(bottom = 16.dp),
             )
-            HomeModeSelector(p.guided) { save(p.copy(guided = it)) }
+            HomeModeSelector(p.guided, target = target) { save(p.copy(guided = it)) }
             PrefKey.entries.filter { it != PrefKey.GUIDED }.forEach { key ->
                 CheckboxCard(
                     checked = p.get(key),
                     onClick = { save(p.toggle(key)) },
-                    modifier = Modifier.padding(bottom = 10.dp),
+                    modifier = Modifier.padding(bottom = 10.dp).then(target(key.name)),
                 ) {
                     Column(Modifier.weight(1f)) {
                         IconLabel(
@@ -170,7 +176,8 @@ fun PreferencesScreen(
             KCard(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 22.dp),
+                    .padding(bottom = 22.dp)
+                    .then(target("preview")),
                 background = if (p.contrast) K.ContrastBg else K.White,
                 borderColor = if (p.contrast) K.ContrastBg else K.Border,
             ) {
@@ -213,10 +220,10 @@ fun PreferencesScreen(
             }
         }
         Column(
-            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 12.dp),
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 12.dp).then(target("finish")),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            PrimaryButton("Continuar", { onContinue(p.guided) }, fontSize = (16f * btnScale).sp)
+            PrimaryButton("Continuar", { save(p); onContinue(p.guided) }, fontSize = (16f * btnScale).sp)
             Text(
                 "Puedes cambiar estas opciones después desde tu perfil.",
                 fontSize = px(12f),
@@ -227,6 +234,7 @@ fun PreferencesScreen(
             )
             GhostButton("Configurar después", { save(p.copy(guided = false)); onSkip() }, fontSize = (13.5f * btnScale).sp)
         }
+    }
     }
 }
 
@@ -243,6 +251,7 @@ fun AccessibilityScreen(store: KuskaStore, onBack: () -> Unit) {
         store.savePrefs(dni, newPrefs)
     }
 
+    PreferenceTutorial(store) { target, replay ->
     Screen {
         TopBar(onBack = onBack, title = "Accesibilidad")
         Column(
@@ -251,18 +260,20 @@ fun AccessibilityScreen(store: KuskaStore, onBack: () -> Unit) {
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 2.dp),
         ) {
+            SecondaryButton("Guía para elegir mis preferencias", replay,
+                modifier = Modifier.padding(bottom = 12.dp).then(target("guides")))
             Text(
                 "Estas son tus preferencias guardadas. Puedes cambiarlas cuando quieras.",
                 fontSize = 13.sp,
                 color = K.Muted,
                 modifier = Modifier.padding(bottom = 16.dp),
             )
-            HomeModeSelector(p.guided) { save(p.copy(guided = it)) }
+            HomeModeSelector(p.guided, target = target) { save(p.copy(guided = it)) }
             PrefKey.entries.filter { it != PrefKey.GUIDED }.forEach { key ->
                 CheckboxCard(
                     checked = p.get(key),
                     onClick = { save(p.toggle(key)) },
-                    modifier = Modifier.padding(bottom = 10.dp),
+                    modifier = Modifier.padding(bottom = 10.dp).then(target(key.name)),
                 ) {
                     Row(Modifier.weight(1f)) {
                         IconLabel(
@@ -279,11 +290,12 @@ fun AccessibilityScreen(store: KuskaStore, onBack: () -> Unit) {
             }
             Spacer(Modifier.height(8.dp))
         }
-        Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 20.dp)) {
+        Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 20.dp).then(target("finish"))) {
             PrimaryButton("Guardar cambios", {
                 save(p)
                 onBack()
             })
         }
+    }
     }
 }

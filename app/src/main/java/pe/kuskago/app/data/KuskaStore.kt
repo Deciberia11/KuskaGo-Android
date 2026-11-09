@@ -87,8 +87,10 @@ class KuskaStore(context: Context) {
             ?.takeIf { it.passHash.isNotBlank() }   // la cuenta demo no tiene contraseña propia
             ?.let { UserAccount(it.nombre, it.celular, it.passHash, it.correo) }
 
+    fun accountExists(dni: String): Boolean = usuarios.buscar(dni) != null
+
     fun saveUser(dni: String, name: String, phone: String, password: String, email: String) {
-        val existente = usuarios.buscar(dni)
+        require(!accountExists(dni)) { "Ya existe una cuenta con ese DNI." }
         usuarios.guardar(
             UsuarioEntity(
                 dni = dni,
@@ -96,10 +98,10 @@ class KuskaStore(context: Context) {
                 celular = phone,
                 passHash = hash(password),
                 correo = email,
-                distrito = existente?.distrito.orEmpty(),
             )
         )
-        if (existente == null) sembrarDatosIniciales(dni)
+        sembrarDatosIniciales(dni)
+        prepareFirstUse(dni)
     }
 
     fun updatePassword(dni: String, newPassword: String): Boolean =
@@ -108,6 +110,48 @@ class KuskaStore(context: Context) {
     fun checkPassword(dni: String, password: String): Boolean {
         val u = usuarios.buscar(dni) ?: return false
         return u.passHash.isNotBlank() && u.passHash == hash(password)
+    }
+
+    /** Una cuenta recién creada debe configurar sus preferencias antes de llegar a Inicio. */
+    private fun prepareFirstUse(dni: String) {
+        clearAccountGuideState(dni)
+        settings.edit().putBoolean("preferences_setup_done_$dni", false).apply()
+    }
+
+    private fun clearAccountGuideState(dni: String) {
+        val editor = settings.edit()
+        settings.all.keys.filter { key ->
+            key == "preferences_setup_done_$dni" ||
+                (key.startsWith("tutorial_") && key.endsWith("_$dni"))
+        }.forEach { editor.remove(it) }
+        editor.apply()
+        val guide = appContext.getSharedPreferences("preference_tutorial", Context.MODE_PRIVATE)
+        guide.edit().remove("done_$dni").remove("step_$dni")
+            .remove("spotlight_done_$dni").remove("spotlight_step_$dni").apply()
+    }
+
+    /** Se llama solo después de la confirmación explícita desde Mi perfil. */
+    suspend fun deleteCurrentAccount(): Boolean {
+        val dni = dniActual() ?: return false
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val photo = settings.getString("profile_photo_$dni", null)
+            db.runInTransaction {
+                check(usuarios.eliminar(dni) == 1) { "No se encontró la cuenta." }
+                sesion.cerrar()
+            }
+            clearAccountGuideState(dni)
+            settings.edit().remove("profile_photo_$dni").putBoolean("remember_session", false).apply()
+            // Solo borra la copia privada creada por la app, nunca un archivo de la galería.
+            photo?.let { path ->
+                runCatching {
+                    val file = java.io.File(path).canonicalFile
+                    if (file.parentFile == appContext.filesDir.canonicalFile && file.name.startsWith("profile_")) {
+                        file.delete()
+                    }
+                }
+            }
+            true
+        }
     }
 
     // ======================= SESIÓN =======================
@@ -121,20 +165,17 @@ class KuskaStore(context: Context) {
         settings.edit().putBoolean("remember_session", value).apply()
     }
 
-    // La presentación automática se completa una sola vez por cuenta. El avance y la repetición usan el modo elegido.
+    // Cada modo completa su propio recorrido. Esta versión vuelve a presentar el
+    // tutorial destacado una vez, sin borrar preferencias ni el historial anterior.
     private fun tutorialKey(dni: String, simple: Boolean): String =
-        "${if (simple) "simple" else "normal"}_$dni"
+        "spotlight_v2_${if (simple) "simple" else "normal"}_$dni"
 
     fun tutorialStep(dni: String, simple: Boolean): Int =
         settings.getInt("tutorial_step_${tutorialKey(dni, simple)}", 0)
 
     fun tutorialCompleted(dni: String, simple: Boolean): Boolean {
         if (settings.getBoolean("tutorial_replay_${tutorialKey(dni, simple)}", false)) return false
-        // Conserva las finalizaciones de las versiones anteriores.
-        return settings.getBoolean("tutorial_completed_$dni", false) ||
-            settings.getBoolean("tutorial_done_normal_$dni", false) ||
-            settings.getBoolean("tutorial_done_simple_$dni", false) ||
-            settings.getBoolean("tutorial_done_$dni", false)
+        return settings.getBoolean("tutorial_completed_${tutorialKey(dni, simple)}", false)
     }
 
     fun saveTutorialStep(dni: String, simple: Boolean, step: Int) {
@@ -143,7 +184,7 @@ class KuskaStore(context: Context) {
 
     fun completeTutorial(dni: String, simple: Boolean) {
         settings.edit()
-            .putBoolean("tutorial_completed_$dni", true)
+            .putBoolean("tutorial_completed_${tutorialKey(dni, simple)}", true)
             .putBoolean("tutorial_replay_${tutorialKey(dni, simple)}", false)
             .apply()
     }
@@ -172,6 +213,7 @@ class KuskaStore(context: Context) {
         if (usuarios.buscar(user.dni) == null) {
             usuarios.guardar(UsuarioEntity(dni = user.dni, nombre = user.name, distrito = "Puno"))
             sembrarDatosIniciales(user.dni)
+            prepareFirstUse(user.dni)
         }
         sesion.abrir(SesionEntity(dni = user.dni, nombre = user.name))
     }
@@ -180,6 +222,24 @@ class KuskaStore(context: Context) {
     private fun dniActual(): String? = currentUser()?.dni?.takeIf { it.isNotBlank() }
 
     // ======================= PREFERENCIAS =======================
+
+    /** Solo una finalización explícita permite saltar la configuración inicial. */
+    fun preferencesSetupCompleted(dni: String): Boolean {
+        if (dni.isBlank()) return false
+        val key = "preferences_setup_done_$dni"
+        return settings.getBoolean(key, false)
+    }
+
+    /** Guardar una opción no completa la configuración: debe pulsar Continuar u omitirla. */
+    fun beginPreferencesSetup(dni: String) {
+        if (dni.isNotBlank() && !settings.contains("preferences_setup_done_$dni")) {
+            settings.edit().putBoolean("preferences_setup_done_$dni", false).apply()
+        }
+    }
+
+    fun completePreferencesSetup(dni: String) {
+        if (dni.isNotBlank()) settings.edit().putBoolean("preferences_setup_done_$dni", true).apply()
+    }
 
     fun getPrefs(dni: String): AccessPrefs? {
         if (dni.isBlank()) return null

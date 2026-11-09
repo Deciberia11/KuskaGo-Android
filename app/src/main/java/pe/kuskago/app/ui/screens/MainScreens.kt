@@ -62,6 +62,7 @@ import pe.kuskago.app.ui.theme.K
 import pe.kuskago.app.ui.theme.KFont
 import pe.kuskago.app.ui.components.IconLabel
 import pe.kuskago.app.ui.components.ProfileAvatar
+import pe.kuskago.app.ui.components.DeleteAccountDialog
 import pe.kuskago.app.ui.components.KIcon
 import pe.kuskago.app.ui.theme.textScale
 import java.text.Normalizer
@@ -112,7 +113,7 @@ fun HomeScreen(store: KuskaStore, go: (Route) -> Unit, target: (String) -> Modif
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                ProfileAvatar(store.profilePhoto(), Modifier.size(52.dp))
+                ProfileAvatar(store.profilePhoto(), Modifier.size(52.dp), name = profile.name)
                 Column(Modifier.weight(1f)) {
                     Text("¡Hola, $firstName!", fontSize = (20 * scale).sp, fontWeight = FontWeight.ExtraBold, color = textColor)
                     Text("¿En qué podemos ayudarte hoy?", fontSize = 13.5.sp, color = if (contrast) K.Faint else K.Muted, fontWeight = FontWeight.SemiBold)
@@ -253,6 +254,8 @@ fun HomeSimpleScreen(go: (Route) -> Unit, onNormalMode: () -> Unit, target: (Str
             }
         }
         Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 20.dp)) {
+            SecondaryButton("Mi perfil y guía completa", { go(Route.Profile) }, modifier = target("perfil"))
+            Spacer(Modifier.height(8.dp))
             SecondaryButton("Volver al modo normal", onNormalMode)
         }
     }
@@ -353,9 +356,15 @@ fun ProfileScreen(
     onBack: () -> Unit,
     go: (Route) -> Unit,
     onLogout: () -> Unit,
+    onAccountDeleted: () -> Unit,
 ) {
     val context = LocalContext.current
     val p = remember { store.getProfile() }
+    var showDeleteAccount by rememberSaveable { mutableStateOf(false) }
+
+    if (showDeleteAccount) DeleteAccountDialog(store,
+        onDismiss = { showDeleteAccount = false },
+        onDeleted = { showDeleteAccount = false; onAccountDeleted() })
 
     Screen {
         TopBar(onBack = onBack, title = "Mi perfil")
@@ -375,7 +384,7 @@ fun ProfileScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                ProfileAvatar(store.profilePhoto(), Modifier.size(60.dp))
+                ProfileAvatar(store.profilePhoto(), Modifier.size(60.dp), name = p.name)
                 Column {
                     Text(p.name, fontWeight = FontWeight.ExtraBold, fontFamily = KFont.Title, fontSize = 17.sp, color = K.Ink)
                     Text("DNI ${p.dni} · ${p.place} · ${p.phone}", fontSize = 12.5.sp, color = K.Muted)
@@ -394,6 +403,8 @@ fun ProfileScreen(
             ListItemRow(null, "Mis documentos") { go(Route.Documents) }
             ListItemRow(null, "Familia") { go(Route.Family) }
             SectionLabel("Otros", Modifier.padding(top = 18.dp))
+            ListItemRow(":helpoutline:", "Guía completa de KuskaGo", "Aprende a usar cada apartado, a tu ritmo") { go(Route.CompleteGuide) }
+            ListItemRow(":supportagent:", "Hablar con una persona", "Soporte por WhatsApp o llamada") { go(Route.Support) }
             ListItemRow(":supportagent:", "Volver a ver el tutorial", "Repetir desde el inicio la guía del modo seleccionado") {
                 val simple = store.getPrefs(store.currentUser()?.dni.orEmpty())?.guided == true
                 store.restartTutorial(simple = simple)
@@ -406,6 +417,8 @@ fun ProfileScreen(
             }
             Spacer(Modifier.height(24.dp))
             SecondaryButton("Cerrar sesión", onLogout, contentColor = K.ErrorTitle, borderColor = K.ErrorBorder)
+            Spacer(Modifier.height(12.dp))
+            SecondaryButton("Eliminar cuenta", { showDeleteAccount = true }, contentColor = K.ErrorTitle, borderColor = K.ErrorBorder)
             Spacer(Modifier.height(20.dp))
         }
         MainBottomNav(Route.Profile, go)
