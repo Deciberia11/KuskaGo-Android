@@ -16,6 +16,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,6 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 import pe.kuskago.app.data.translator.BureaucracyTranslator
 import pe.kuskago.app.data.translator.BureaucracyTranslator.Term
 import pe.kuskago.app.data.translator.AiClient
@@ -87,6 +92,7 @@ fun TranslatorScreen(onBack: () -> Unit) {
             try {
                 context.contentResolver.openInputStream(uri)?.use { input ->
                     docText = input.bufferedReader().readText().take(6000)
+                    result = null; aiText = null; aiError = null
                 }
             } catch (e: Exception) {
                 docText = ""
@@ -104,22 +110,37 @@ fun TranslatorScreen(onBack: () -> Unit) {
         aiError = null
         aiText = null
         aiLoading = true
+        val requestedSettings = ai
+        val requestedText = docText
         scope.launch {
-            when (val r = AiClient.explain(ai, docText)) {
-                is AiClient.Outcome.Ok -> aiText = r.text
-                is AiClient.Outcome.Error -> aiError = r.message
+            try {
+                val r = AiClient.explain(requestedSettings, requestedText)
+                if (ai == requestedSettings && docText == requestedText) when (r) {
+                    is AiClient.Outcome.Ok -> aiText = r.text
+                    is AiClient.Outcome.Error -> aiError = r.message
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                aiError = "No se pudo obtener la explicación. Comprueba la conexión e inténtalo de nuevo."
+            } finally {
+                aiLoading = false
             }
-            aiLoading = false
         }
     }
 
     Screen {
         TopBar(onBack = onBack, title = "Traductor de burocracia")
-        PillTabs(
-            tabs = listOf("local" to "Sin internet", "ia" to "Con IA"),
-            selected = mode,
-            onSelect = { speak.stop(); mode = it },
-        )
+        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
+            Text("1. Elige cómo explicar tu documento", fontWeight = FontWeight.Bold, color = K.Ink)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                TranslatorChoice("Diccionario", mode == "local", Modifier.weight(1f)) { speak.stop(); mode = "local" }
+                TranslatorChoice("Con inteligencia artificial", mode == "ia", Modifier.weight(1f)) { speak.stop(); mode = "ia" }
+            }
+            Text(if (mode == "local") "Seleccionado: diccionario sin Internet ni IA."
+                else "Seleccionado: IA con Ollama o Gemini. Configura el servicio abajo.",
+                fontSize = 12.sp, color = K.Muted)
+        }
         Box(Modifier.weight(1f)) {
             Column(
                 Modifier
@@ -132,24 +153,25 @@ fun TranslatorScreen(onBack: () -> Unit) {
                     else "La IA lee tu documento y te explica qué dice, qué tienes que hacer y el plazo.",
                     fontSize = 13.5.sp, color = K.Muted, lineHeight = 19.sp, modifier = Modifier.padding(bottom = 12.dp),
                 )
-                ChoiceCard(":attachfile: Subir documento (.txt)", { picker.launch(arrayOf("text/plain")) }, Modifier.padding(bottom = 10.dp))
+                Text("2. Agrega el texto", fontWeight = FontWeight.Bold, color = K.Ink, modifier = Modifier.padding(bottom = 8.dp))
+                SecondaryButton(":attachfile: Seleccionar archivo .txt", { picker.launch(arrayOf("text/plain")) }, Modifier.padding(bottom = 10.dp))
                 KTextField(
                     value = docText,
-                    onValueChange = { docText = it },
+                    onValueChange = { docText = it.take(6000); result = null; aiText = null; aiError = null },
                     placeholder = "…o pega aquí el texto de tu documento",
                     singleLine = false,
                     minLines = 5,
                     modifier = Modifier.padding(bottom = 6.dp),
                 )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    GhostButton("Probar con un ejemplo", {
-                        docText = BureaucracyTranslator.SAMPLE
-                        result = null; aiText = null; aiError = null
-                    }, fontSize = 13.sp)
-                }
+                SecondaryButton("Usar un texto de ejemplo", {
+                    docText = BureaucracyTranslator.SAMPLE
+                    result = null; aiText = null; aiError = null
+                }, Modifier.padding(bottom = 12.dp), minHeight = 48.dp, fontSize = 14.sp)
+                if (docText.isBlank()) Text("Agrega texto o usa el ejemplo para activar el botón de explicación.",
+                    fontSize = 12.sp, color = K.Muted, modifier = Modifier.padding(bottom = 10.dp))
 
                 if (mode == "local") {
-                    PrimaryButton("Traducir mi documento", { if (docText.isNotBlank()) runLocal() })
+                    PrimaryButton("3. Explicar con el diccionario", { runLocal() }, enabled = docText.isNotBlank())
                     Spacer(Modifier.height(18.dp))
                     result?.let { r -> LocalResult(r, speak) }
                 } else {
@@ -157,18 +179,29 @@ fun TranslatorScreen(onBack: () -> Unit) {
                         settings = ai,
                         expanded = showSettings,
                         onToggle = { showSettings = !showSettings },
-                        onChange = { ai = it; AiClient.save(context, it); testMsg = null },
+                        onChange = { ai = it; AiClient.save(context, it); testMsg = null; aiText = null; aiError = null },
                         testing = testing,
                         testMsg = testMsg,
                         onTest = {
                             testing = true; testMsg = null
-                            scope.launch { testMsg = AiClient.testOllama(ai); testing = false }
+                            val requestedSettings = ai
+                            scope.launch {
+                                try {
+                                    val response = AiClient.testConnection(requestedSettings)
+                                    if (ai == requestedSettings) testMsg = response
+                                } catch (e: CancellationException) {
+                                    throw e
+                                } catch (_: Exception) {
+                                    testMsg = AiClient.Outcome.Error("No se pudo comprobar la conexión. Inténtalo nuevamente.")
+                                } finally { testing = false }
+                            }
                         },
                     )
                     PrimaryButton(
                         if (aiLoading) "Explicando…" else ":autoawesome: Explicar con IA",
                         { if (docText.isNotBlank() && !aiLoading) runAi() },
                         containerColor = K.SelvaText,
+                        enabled = docText.isNotBlank() && !aiLoading && !testing,
                     )
                     IconLabel(
                         if (ai.provider == AiClient.Provider.OLLAMA)
@@ -285,25 +318,30 @@ private fun AiSettingsCard(
     testMsg: AiClient.Outcome?,
     onTest: () -> Unit,
 ) {
-    val providerLabel = if (settings.provider == AiClient.Provider.OLLAMA) "Ollama · ${settings.ollamaModel}" else "Gemini"
-    KCard(Modifier.fillMaxWidth().padding(bottom = 14.dp), onClick = if (expanded) null else onToggle) {
+    val providerLabel = if (settings.provider == AiClient.Provider.OLLAMA) "Ollama · ${settings.ollamaModel}" else "Gemini · ${settings.geminiModel}"
+    KCard(Modifier.fillMaxWidth().padding(bottom = 14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 IconLabel(":settings: IA: $providerLabel", fontWeight = FontWeight.ExtraBold, fontSize = 13.5.sp, color = K.Ink)
-                if (!expanded) Text("Toca para configurar", fontSize = 12.sp, color = K.Muted)
+
             }
-            if (expanded) GhostButtonSmall("Cerrar", onToggle)
+
         }
+        Spacer(Modifier.height(10.dp))
+        SecondaryButton(if (expanded) "Ocultar configuración de IA" else ":settings: Configurar IA", onToggle, minHeight = 48.dp, fontSize = 14.sp)
         if (expanded) {
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 12.dp)) {
-                OptionChip("Ollama (en tu PC, gratis)", settings.provider == AiClient.Provider.OLLAMA) {
+                TranslatorChoice("Ollama local", settings.provider == AiClient.Provider.OLLAMA, Modifier.weight(1f)) {
                     onChange(settings.copy(provider = AiClient.Provider.OLLAMA))
                 }
-                OptionChip("Gemini", settings.provider == AiClient.Provider.GEMINI) {
+                TranslatorChoice("Gemini", settings.provider == AiClient.Provider.GEMINI, Modifier.weight(1f)) {
                     onChange(settings.copy(provider = AiClient.Provider.GEMINI))
                 }
             }
+            Text(if (settings.provider == AiClient.Provider.OLLAMA) "Ollama usa el modelo instalado en tu computadora."
+                else "Gemini necesita acceso a Internet y una clave válida de Google.",
+                fontSize = 12.sp, color = K.Muted, modifier = Modifier.padding(bottom = 10.dp))
             if (settings.provider == AiClient.Provider.OLLAMA) {
                 Text("Dirección de Ollama", fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = K.Label, modifier = Modifier.padding(bottom = 4.dp))
                 KTextField(settings.ollamaUrl, { onChange(settings.copy(ollamaUrl = it)) }, "http://10.0.2.2:11434", Modifier.padding(bottom = 4.dp))
@@ -313,18 +351,23 @@ private fun AiSettingsCard(
                 )
                 Text("Modelo", fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = K.Label, modifier = Modifier.padding(bottom = 4.dp))
                 KTextField(settings.ollamaModel, { onChange(settings.copy(ollamaModel = it)) }, "llama3.2:3b", Modifier.padding(bottom = 10.dp))
-                SecondaryButton(if (testing) "Probando…" else "Probar conexión", { if (!testing) onTest() }, minHeight = 42.dp, fontSize = 14.sp)
-                when (testMsg) {
-                    is AiClient.Outcome.Ok -> Text(testMsg.text, fontSize = 12.5.sp, color = K.Green, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
-                    is AiClient.Outcome.Error -> Text(testMsg.message, fontSize = 12.5.sp, color = K.ErrorTitle, modifier = Modifier.padding(top = 8.dp))
-                    null -> {}
-                }
             } else {
+                Text("Modelo de Gemini", fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = K.Label,
+                    modifier = Modifier.padding(bottom = 4.dp))
+                KTextField(settings.geminiModel, { onChange(settings.copy(geminiModel = it)) },
+                    "gemini-3.8-flash", Modifier.padding(bottom = 10.dp))
                 Text(
                     if (AiClient.geminiConfigured) "Gemini está configurado (clave en local.properties)."
                     else "Para usar Gemini agrega GEMINI_API_KEY en local.properties y vuelve a compilar.",
                     fontSize = 12.5.sp, color = if (AiClient.geminiConfigured) K.Green else K.Muted,
                 )
+            }
+            Spacer(Modifier.height(10.dp))
+            SecondaryButton(if (testing) "Probando…" else "Probar conexión", { if (!testing) onTest() }, minHeight = 48.dp, fontSize = 14.sp)
+            when (testMsg) {
+                is AiClient.Outcome.Ok -> Text(testMsg.text, fontSize = 12.5.sp, color = K.Green, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+                is AiClient.Outcome.Error -> Text(testMsg.message, fontSize = 12.5.sp, color = K.ErrorTitle, modifier = Modifier.padding(top = 8.dp))
+                null -> {}
             }
         }
     }
@@ -335,4 +378,17 @@ private fun GhostButtonSmall(text: String, onClick: () -> Unit) {
     androidx.compose.material3.TextButton(onClick = onClick) {
         Text(text, color = K.Green, fontWeight = FontWeight.Bold, fontSize = 13.sp)
     }
+}
+
+@Composable
+private fun TranslatorChoice(label: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(if (selected) "✓ $label" else label, fontWeight = FontWeight.Bold, fontSize = 13.sp) },
+        modifier = modifier.heightIn(min = 52.dp),
+        border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) K.Green else K.Muted),
+        colors = FilterChipDefaults.filterChipColors(containerColor = K.White,
+            labelColor = K.Ink, selectedContainerColor = K.Green, selectedLabelColor = K.White),
+    )
 }

@@ -7,6 +7,9 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
+fun quotedConfig(value: String): String = "\"" + value.replace("\\", "\\\\")
+    .replace("\"", "\\\"").replace("\r", "\\r").replace("\n", "\\n") + "\""
+
 android {
     namespace = "pe.kuskago.app"
     compileSdk = 35
@@ -20,19 +23,19 @@ android {
 
         // Clave de la IA alternativa (Gemini). Se lee de local.properties para no subirla al repositorio:
         //   GEMINI_API_KEY=tu_clave
-        //   GEMINI_MODEL=gemini-3.5-flash-lite   (opcional)
+        //   GEMINI_MODEL=gemini-3.8-flash   (opcional; también se puede cambiar dentro de la app)
         val localProps = Properties().apply {
             val f = rootProject.file("local.properties")
             if (f.exists()) f.inputStream().use { load(it) }
         }
-        buildConfigField("String", "GEMINI_API_KEY", "\"${localProps.getProperty("GEMINI_API_KEY", "")}\"")
-        buildConfigField("String", "GEMINI_MODEL", "\"${localProps.getProperty("GEMINI_MODEL", "gemini-3.5-flash-lite")}\"")
+        buildConfigField("String", "GEMINI_API_KEY", quotedConfig(localProps.getProperty("GEMINI_API_KEY", "").trim()))
+        buildConfigField("String", "GEMINI_MODEL", quotedConfig(localProps.getProperty("GEMINI_MODEL", "gemini-3.8-flash").trim()))
 
         // IA local con Ollama (gratis, corre en tu PC). Valores por defecto; se pueden cambiar dentro de la app.
         //   OLLAMA_URL=http://10.0.2.2:11434   (emulador)  ·  http://IP_DE_TU_PC:11434  (celular en la misma Wi-Fi)
         //   OLLAMA_MODEL=llama3.2:3b
-        buildConfigField("String", "OLLAMA_URL", "\"${localProps.getProperty("OLLAMA_URL", "http://10.0.2.2:11434")}\"")
-        buildConfigField("String", "OLLAMA_MODEL", "\"${localProps.getProperty("OLLAMA_MODEL", "llama3.2:3b")}\"")
+        buildConfigField("String", "OLLAMA_URL", quotedConfig(localProps.getProperty("OLLAMA_URL", "http://10.0.2.2:11434").trim()))
+        buildConfigField("String", "OLLAMA_MODEL", quotedConfig(localProps.getProperty("OLLAMA_MODEL", "llama3.2:3b").trim()))
     }
 
     buildTypes {
